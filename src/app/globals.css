@@ -1,0 +1,139 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: 220 13% 98%;
+    --foreground: 211 69% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 211 69% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 211 69% 15%;
+    --primary: 217 62% 54%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 217 62% 54%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 94%;
+    --ring: 217 62% 54%;
+    --chart-1: 211 69% 32%;
+    --chart-2: 217 62% 54%;
+    --chart-3: 211 40% 50%;
+    --chart-4: 217 40% 70%;
+    --chart-5: 211 50% 40%;
+    --radius: 0.8rem;
+    --sidebar-background: 211 69% 28%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 211 69% 28%;
+    --sidebar-accent: 211 69% 36%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 211 69% 36%;
+    --sidebar-ring: 217 62% 54%;
+  }
+  .dark {
+    --background: 220 13% 8%;
+    --foreground: 0 0% 98%;
+    --card: 220 13% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 220 13% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 62% 54%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 220 13% 18%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 220 13% 18%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 217 62% 54%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 18%;
+    --input: 220 13% 18%;
+    --ring: 217 62% 54%;
+    --chart-1: 211 69% 40%;
+    --chart-2: 217 62% 60%;
+    --chart-3: 211 50% 60%;
+    --chart-4: 217 50% 80%;
+    --chart-5: 211 60% 50%;
+    --sidebar-background: 220 13% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 217 62% 54%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 220 13% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 13% 18%;
+    --sidebar-ring: 217 62% 54%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+    .collapsible-chevron {
+        @apply transition-transform duration-200;
+    }
+    .collapsible-item[data-state='open'] .collapsible-chevron {
+        @apply rotate-180;
+    }
+
+    .animated-card .card-glow {
+      background-image: radial-gradient(
+        circle at var(--glow-x) var(--glow-y),
+        hsl(var(--primary) / 0.2),
+        hsl(var(--primary) / 0) 40%
+      );
+      transition: opacity 0.3s ease-in-out;
+      opacity: 0;
+    }
+
+    .animated-card:hover .card-glow {
+      opacity: 1;
+    }
+}
+
+@layer utilities {
+    .icon-monitoreo { color: #2563eb; }
+    .icon-solicitudes { color: #f59e0b; }
+    .icon-rutas { color: #16a34a; }
+    .icon-gestion { color: #8b5cf6; }
+    .icon-usuarios { color: #64748b; }
+    .icon-choferes { color: #64748b; }
+    .icon-reportes { color: #ec4899; }
+    .icon-configuracion { color: #0891b2; }
+    .icon-datamaster { color: #f43f5e; }
+
+    .dark .icon-monitoreo { color: #3b82f6; }
+    .dark .icon-solicitudes { color: #f97316; }
+    .dark .icon-rutas { color: #22c55e; }
+    .dark .icon-gestion { color: #a78bfa; }
+    .dark .icon-usuarios { color: #94a3b8; }
+    .dark .icon-choferes { color: #94a3b8; }
+    .dark .icon-reportes { color: #f472b6; }
+    .dark .icon-configuracion { color: #06b6d4; }
+    .dark .icon-datamaster { color: #fb7185; }
+
+    .text-blue-500 { color: #3b82f6; }
+    .text-green-500 { color: #22c55e; }
+    .text-amber-500 { color: #f59e0b; }
+    .text-rose-500 { color: #f43f5e; }
+}
