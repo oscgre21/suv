@@ -99,7 +99,7 @@ export default function ChoferesVehiculosPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {conductores.map(conductor => (
-                                            <Collapsible key={conductor.id}>
+                                            <Collapsible key={conductor.id} asChild>
                                                 <>
                                                     <CollapsibleTrigger asChild>
                                                         <TableRow className="cursor-pointer hover:bg-muted/50 data-[state=open]:bg-muted/50">
@@ -139,8 +139,8 @@ export default function ChoferesVehiculosPage() {
                                                         </TableRow>
                                                     </CollapsibleTrigger>
                                                     <CollapsibleContent asChild>
-                                                        <TableRow>
-                                                            <TableCell colSpan={6} className="p-0">
+                                                        <TableRow className="hover:bg-transparent">
+                                                            <TableCell colSpan={6} className="p-0 border-b">
                                                                 <div className="p-6 bg-muted/20">
                                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                                         <div>
