@@ -160,9 +160,9 @@ export default function VistaBusPage() {
             setParadas(paradasData);
             setSolicitudesPorParada(solicitudesData);
 
-            // Inicializar pasajeros a bordo con la capacidad del vehículo
-            if (conductorData.vehiculo?.capacidad) {
-                setPassengersOnBoard(Math.floor(conductorData.vehiculo.capacidad * 0.4)); // 40% inicial
+            // Inicializar pasajeros a bordo desde la base de datos
+            if (conductorData.vehiculo?.pasajerosABordo !== undefined) {
+                setPassengersOnBoard(conductorData.vehiculo.pasajerosABordo);
             }
         } catch (error) {
             console.error('Error cargando datos del conductor:', error);
@@ -214,9 +214,19 @@ export default function VistaBusPage() {
         // Actualizar estado del vehículo a "En Ruta"
         if (conductor?.vehiculo?.id) {
             try {
-                await execute(`/api/vehiculos/${conductor.vehiculo.id}/estado`, 'PATCH', {
-                    estado: 'En Ruta'
-                });
+                // Inicializar pasajeros a bordo (40% de capacidad)
+                const initialPassengers = Math.floor((conductor.vehiculo.capacidad || 0) * 0.4);
+
+                await Promise.all([
+                    execute(`/api/vehiculos/${conductor.vehiculo.id}/estado`, 'PATCH', {
+                        estado: 'En Ruta'
+                    }),
+                    execute(`/api/vehiculos/${conductor.vehiculo.id}/pasajeros`, 'PATCH', {
+                        pasajerosABordo: initialPassengers
+                    })
+                ]);
+
+                setPassengersOnBoard(initialPassengers);
             } catch (error) {
                 console.error('Error actualizando estado del vehículo:', error);
             }
@@ -227,20 +237,21 @@ export default function VistaBusPage() {
         setIsRouteActive(false);
         setTripDuration(formatTime(elapsedTime));
 
-        // Resetear a estado inicial
-        const initialPassengers = conductor?.vehiculo?.capacidad
-            ? Math.floor(conductor.vehiculo.capacidad * 0.4)
-            : 15;
-
-        setPassengersOnBoard(initialPassengers);
+        // Resetear pasajeros a bordo a 0
+        setPassengersOnBoard(0);
         setCurrentStopIndex(0);
 
-        // Actualizar estado del vehículo a "Operativo"
+        // Actualizar estado del vehículo a "Operativo" y resetear pasajeros
         if (conductor?.vehiculo?.id) {
             try {
-                await execute(`/api/vehiculos/${conductor.vehiculo.id}/estado`, 'PATCH', {
-                    estado: 'Operativo'
-                });
+                await Promise.all([
+                    execute(`/api/vehiculos/${conductor.vehiculo.id}/estado`, 'PATCH', {
+                        estado: 'Operativo'
+                    }),
+                    execute(`/api/vehiculos/${conductor.vehiculo.id}/pasajeros`, 'PATCH', {
+                        pasajerosABordo: 0
+                    })
+                ]);
             } catch (error) {
                 console.error('Error actualizando estado del vehículo:', error);
             }
@@ -277,14 +288,26 @@ export default function VistaBusPage() {
         }
     };
 
-    const handleConfirmStop = () => {
+    const handleConfirmStop = async () => {
         if (!paradas[currentStopIndex]) return;
 
         playSuccessSound();
 
         // Agregar pasajeros esperando en la parada actual
         const currentStopRequests = solicitudesPorParada[paradas[currentStopIndex].id] || 0;
-        setPassengersOnBoard(prevOnBoard => prevOnBoard + currentStopRequests);
+        const newPassengersCount = passengersOnBoard + currentStopRequests;
+        setPassengersOnBoard(newPassengersCount);
+
+        // Actualizar pasajeros en la base de datos
+        if (conductor?.vehiculo?.id) {
+            try {
+                await execute(`/api/vehiculos/${conductor.vehiculo.id}/pasajeros`, 'PATCH', {
+                    pasajerosABordo: newPassengersCount
+                });
+            } catch (error) {
+                console.error('Error actualizando pasajeros:', error);
+            }
+        }
 
         // Avanzar a siguiente parada
         const nextStopIndex = (currentStopIndex + 1) % paradas.length;

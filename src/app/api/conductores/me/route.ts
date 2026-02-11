@@ -31,6 +31,7 @@ export async function GET() {
             capacidad: true,
             estado: true,
             velocidad: true,
+            pasajerosABordo: true,
             ruta: {
               select: {
                 id: true,

@@ -18,11 +18,11 @@ export async function PATCH(
       );
     }
 
-    const { estado } = await request.json();
+    const { pasajerosABordo } = await request.json();
 
-    if (!estado) {
+    if (pasajerosABordo === undefined || pasajerosABordo === null) {
       return NextResponse.json(
-        { error: 'Estado es requerido' },
+        { error: 'pasajerosABordo es requerido' },
         { status: 400 }
       );
     }
@@ -40,11 +40,11 @@ export async function PATCH(
       );
     }
 
-    // Actualizar estado del vehículo
+    // Actualizar pasajeros a bordo del vehículo
     const vehiculo = await prisma.vehiculo.update({
       where: { id },
       data: {
-        estado,
+        pasajerosABordo,
         ultimaActualizacion: new Date(),
       },
       select: {
@@ -73,13 +73,13 @@ export async function PATCH(
       tiempoEstimado: null,
     });
 
-    console.log(`[SSE] Emitido evento vehiculo-update para ${vehiculo.ficha} - Estado: ${vehiculo.estado}`);
+    console.log(`[SSE] Emitido evento vehiculo-update para ${vehiculo.ficha} - Pasajeros: ${vehiculo.pasajerosABordo}`);
 
     return NextResponse.json(vehiculo);
   } catch (error) {
-    console.error('Error actualizando estado del vehículo:', error);
+    console.error('Error actualizando pasajeros del vehículo:', error);
     return NextResponse.json(
-      { error: 'Error al actualizar estado del vehículo' },
+      { error: 'Error al actualizar pasajeros del vehículo' },
       { status: 500 }
     );
   }

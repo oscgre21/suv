@@ -61,6 +61,7 @@ model Vehiculo {
   velocidad           Float?           @default(0) // Velocidad actual en km/h
   latitud             Float?           // Latitud GPS
   longitud            Float?           // Longitud GPS
+  pasajerosABordo     Int?             @default(0) // Número de pasajeros actualmente en el bus
   ultimaActualizacion DateTime?        // Timestamp última actualización GPS
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
