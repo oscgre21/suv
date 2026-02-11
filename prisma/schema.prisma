@@ -12,6 +12,7 @@ model Usuario {
   nombre          String
   cedula          String            @unique
   email           String            @unique
+  password        String            // Contraseña hasheada con bcrypt
   telefono        String?
   direccion       String?
   rutaAsignada    String?
@@ -48,18 +49,22 @@ model Conductor {
 
 // ==================== VEHICULOS ====================
 model Vehiculo {
-  id              String           @id @default(cuid())
-  ficha           String           @unique
-  modelo          String
-  placa           String           @unique
-  capacidad       Int
-  estado          String           @default("Operativo") // Operativo | EnTaller | FueraDeServicio
-  rutaAsignada    String?
-  ruta            Ruta?            @relation(fields: [rutaAsignada], references: [id])
-  conductor       Conductor?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  historialViajes HistorialViaje[]
+  id                  String           @id @default(cuid())
+  ficha               String           @unique
+  modelo              String
+  placa               String           @unique
+  capacidad           Int
+  estado              String           @default("Operativo") // Operativo | EnTaller | FueraDeServicio
+  rutaAsignada        String?
+  ruta                Ruta?            @relation(fields: [rutaAsignada], references: [id])
+  conductor           Conductor?
+  velocidad           Float?           @default(0) // Velocidad actual en km/h
+  latitud             Float?           // Latitud GPS
+  longitud            Float?           // Longitud GPS
+  ultimaActualizacion DateTime?        // Timestamp última actualización GPS
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  historialViajes     HistorialViaje[]
 
   @@map("vehiculos")
 }

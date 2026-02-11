@@ -14,6 +14,8 @@ import { playErrorSound, stopLoopingAlertSound } from '@/lib/audio';
 import { useUsuario } from '@/app/usuario/usuario-provider';
 import { SurveyDialog } from '@/components/survey-dialog';
 import { Countdown } from '@/components/countdown';
+import { useAuth } from '@/contexts/auth-context';
+import { Loader2 } from 'lucide-react';
 
 
 function UsuarioPageContent() {
@@ -21,6 +23,7 @@ function UsuarioPageContent() {
         buses,
         selectedBusId,
         setSelectedBusId,
+        selectedBus,
         notified,
         isPenaltyActive,
         countdownSeconds,
@@ -32,11 +35,11 @@ function UsuarioPageContent() {
         handleCancellation,
         handlePenaltyEnd,
         getRemainingPenaltyTime,
+        isLoading,
     } = useUsuario();
 
+    const { usuario, isLoading: authLoading } = useAuth();
     const [greeting, setGreeting] = useState("Hola");
-    
-    const selectedBus = buses.find(bus => bus.id === selectedBusId) || buses[0];
 
     useEffect(() => {
         const getGreeting = () => {
@@ -107,6 +110,33 @@ function UsuarioPageContent() {
         }
     }
 
+    // Loading state
+    if (authLoading || isLoading) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
+
+    // No autenticado
+    if (!usuario) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <p>No autenticado</p>
+            </div>
+        );
+    }
+
+    // No hay buses disponibles
+    if (!selectedBus) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <p>No hay vehículos disponibles en tu ruta</p>
+            </div>
+        );
+    }
+
     return (
         <div className="h-full w-full flex flex-col">
             <SurveyDialog open={showSurvey} onOpenChange={setShowSurvey} />
@@ -127,33 +157,33 @@ function UsuarioPageContent() {
 
             <div className="p-4 bg-background flex justify-between items-start">
                 <div>
-                    <h2 className="text-xl font-bold">{greeting}, Kendy Qualey</h2>
+                    <h2 className="text-xl font-bold">{greeting}, {usuario.nombre}</h2>
                     <div className="flex items-center gap-1 text-muted-foreground text-sm">
                         <MapPin className="h-4 w-4" />
-                        <span>Charles de Gaulle</span>
+                        <span>{usuario.ruta?.nombre || 'Sin ruta asignada'}</span>
                     </div>
                 </div>
                 <WeatherWidget />
             </div>
             <div className="flex-grow relative">
-                 <AnimatedMap 
+                 <AnimatedMap
                     isNotified={notified}
                     countdownSeconds={countdownSeconds}
-                    initialSeconds={selectedBus.estimatedTime * 60}
+                    initialSeconds={(selectedBus.tiempoEstimado || 5) * 60}
                  />
             </div>
-            
+
             <div className="bg-background/80 backdrop-blur-sm p-2">
                 <Card className="w-full max-w-lg mx-auto shadow-lg border-t">
                     <CardContent className="p-4 grid gap-4">
                         <div className="flex items-center gap-2">
                             <span className="relative flex h-3 w-3">
-                                <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", getStatusPingColor(selectedBus.status))}></span>
-                                <span className={cn("relative inline-flex rounded-full h-3 w-3", getStatusDotColor(selectedBus.status))}></span>
+                                <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", getStatusPingColor(selectedBus.estado))}></span>
+                                <span className={cn("relative inline-flex rounded-full h-3 w-3", getStatusDotColor(selectedBus.estado))}></span>
                             </span>
-                            <span className={cn("font-semibold", getStatusColor(selectedBus.status))}>{selectedBus.status}</span>
+                            <span className={cn("font-semibold", getStatusColor(selectedBus.estado))}>{selectedBus.estado}</span>
                         </div>
-                        
+
                         <div>
                             <h3 className="text-sm font-medium mb-2 text-muted-foreground">Buses disponibles</h3>
                             <div className="grid grid-cols-2 gap-2">
@@ -170,11 +200,11 @@ function UsuarioPageContent() {
                                     >
                                         <div className="flex items-center gap-2">
                                             <Bus className="h-5 w-5"/>
-                                            <span className="font-bold">{bus.id}</span>
+                                            <span className="font-bold">{bus.ficha}</span>
                                         </div>
-                                        <Badge variant={getStatusVariant(bus.status)} className={cn(
-                                            selectedBusId === bus.id && bus.status === 'En ruta' ? "bg-primary-foreground/20 text-primary-foreground" : ""
-                                        )}>{bus.status}</Badge>
+                                        <Badge variant={getStatusVariant(bus.estado)} className={cn(
+                                            selectedBusId === bus.id && bus.estado === 'Operativo' ? "bg-primary-foreground/20 text-primary-foreground" : ""
+                                        )}>{bus.estado}</Badge>
                                     </Button>
                                 ))}
                             </div>
@@ -185,20 +215,20 @@ function UsuarioPageContent() {
                                 <Clock className="h-5 w-5 text-primary"/>
                                 <div className='text-sm'>
                                     <span className="text-muted-foreground">Tiempo estimado: </span>
-                                    <span className="font-bold">{selectedBus.estimatedTime} min</span>
+                                    <span className="font-bold">{selectedBus.tiempoEstimado || '?'} min</span>
                                 </div>
                             </div>
                              <div className="flex items-center gap-3">
                                 <AlertCircle className="h-5 w-5 text-primary"/>
                                  <div className='text-sm'>
                                     <span className="text-muted-foreground">Próxima parada: </span>
-                                    <span className="font-bold">{selectedBus.nextStop}</span>
+                                    <span className="font-bold">{selectedBus.proximaParada || 'Calculando...'}</span>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
-                            {selectedBus.status === 'En ruta' ? (
+                            {selectedBus.estado === 'Operativo' ? (
                                 <Button 
                                     size="lg" 
                                     className="w-full h-12 text-base font-bold shadow-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"

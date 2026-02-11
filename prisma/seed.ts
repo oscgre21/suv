@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import bcrypt from 'bcryptjs';
 
 const { Pool } = pg;
 
@@ -311,7 +312,7 @@ async function main() {
   console.log('✅ 5 conductores creados\n');
 
   // ==================== VEHÍCULOS ====================
-  console.log('🚌 Creando vehículos...');
+  console.log('🚌 Creando vehículos con datos GPS...');
 
   const vehiculo1 = await prisma.vehiculo.create({
     data: {
@@ -321,6 +322,10 @@ async function main() {
       capacidad: 30,
       estado: 'Operativo',
       rutaAsignada: rutaCharles.id,
+      velocidad: 45.5,
+      latitud: 18.4861,
+      longitud: -69.9312,
+      ultimaActualizacion: new Date(),
     },
   });
 
@@ -332,6 +337,10 @@ async function main() {
       capacidad: 28,
       estado: 'Operativo',
       rutaAsignada: rutaDuarte.id,
+      velocidad: 0,
+      latitud: 18.5012,
+      longitud: -69.9112,
+      ultimaActualizacion: new Date(),
     },
   });
 
@@ -343,6 +352,10 @@ async function main() {
       capacidad: 32,
       estado: 'Operativo',
       rutaAsignada: rutaIndependencia.id,
+      velocidad: 52.3,
+      latitud: 18.4678,
+      longitud: -69.8834,
+      ultimaActualizacion: new Date(),
     },
   });
 
@@ -354,6 +367,10 @@ async function main() {
       capacidad: 30,
       estado: 'EnTaller',
       rutaAsignada: null,
+      velocidad: 0,
+      latitud: null,
+      longitud: null,
+      ultimaActualizacion: null,
     },
   });
 
@@ -365,10 +382,14 @@ async function main() {
       capacidad: 28,
       estado: 'Operativo',
       rutaAsignada: rutaEspecial.id,
+      velocidad: 38.7,
+      latitud: 18.4567,
+      longitud: -69.9523,
+      ultimaActualizacion: new Date(),
     },
   });
 
-  console.log('✅ 5 vehículos creados\n');
+  console.log('✅ 5 vehículos creados con coordenadas GPS\n');
 
   // ==================== ASIGNAR CONDUCTORES A VEHÍCULOS ====================
   console.log('🔗 Asignando conductores a vehículos...');
@@ -396,13 +417,17 @@ async function main() {
   console.log('✅ 4 conductores asignados a vehículos\n');
 
   // ==================== USUARIOS ====================
-  console.log('👥 Creando usuarios...');
+  console.log('👥 Creando usuarios con contraseñas...');
+
+  // Contraseña por defecto: "password123" (hasheada)
+  const defaultPassword = await bcrypt.hash('password123', 10);
 
   const usuario1 = await prisma.usuario.create({
     data: {
       nombre: 'Juan Carlos Pérez',
       cedula: '004-1234567-9',
       email: 'juan.perez@empresa.com',
+      password: defaultPassword,
       telefono: '809-555-1001',
       direccion: 'Sabana Larga, Santo Domingo Oeste',
       rutaAsignada: rutaCharles.id,
@@ -415,6 +440,7 @@ async function main() {
       nombre: 'María Rodríguez Santos',
       cedula: '004-9876543-2',
       email: 'maria.rodriguez@empresa.com',
+      password: defaultPassword,
       telefono: '809-555-1002',
       direccion: 'Villa Mella, Santo Domingo Norte',
       rutaAsignada: rutaDuarte.id,
@@ -427,6 +453,7 @@ async function main() {
       nombre: 'Ana María López',
       cedula: '005-2345678-0',
       email: 'ana.lopez@empresa.com',
+      password: defaultPassword,
       telefono: '809-555-1003',
       direccion: 'Independencia, Santo Domingo',
       rutaAsignada: rutaIndependencia.id,
@@ -439,6 +466,7 @@ async function main() {
       nombre: 'Roberto Martínez García',
       cedula: '005-8765432-1',
       email: 'roberto.martinez@empresa.com',
+      password: defaultPassword,
       telefono: '809-555-1004',
       direccion: 'Herrera, Santo Domingo',
       rutaAsignada: rutaCharles.id,
@@ -451,6 +479,7 @@ async function main() {
       nombre: 'Carmen Julia Fernández',
       cedula: '006-3456789-1',
       email: 'carmen.fernandez@empresa.com',
+      password: defaultPassword,
       telefono: '809-555-1005',
       direccion: 'Los Mina, Santo Domingo Este',
       rutaAsignada: rutaDuarte.id,
@@ -458,7 +487,7 @@ async function main() {
     },
   });
 
-  console.log('✅ 5 usuarios creados\n');
+  console.log('✅ 5 usuarios creados (password: password123)\n');
 
   // ==================== HORARIOS ====================
   console.log('⏰ Creando horarios...');
@@ -513,6 +542,244 @@ async function main() {
 
   console.log('✅ 4 horarios creados\n');
 
+  // ==================== SOLICITUDES DE PARADAS ====================
+  console.log('📝 Creando solicitudes de paradas...');
+
+  // Obtener las paradas creadas
+  const paradasCharles = await prisma.parada.findMany({
+    where: { rutaId: rutaCharles.id },
+  });
+
+  const paradasDuarte = await prisma.parada.findMany({
+    where: { rutaId: rutaDuarte.id },
+  });
+
+  // Solicitudes pendientes (últimas 24h)
+  await prisma.solicitudParada.createMany({
+    data: [
+      {
+        usuarioId: usuario1.id,
+        paradaId: paradasCharles[0].id,
+        rutaId: rutaCharles.id,
+        estado: 'Pendiente',
+        horaSolicitud: new Date(Date.now() - 2 * 60 * 60 * 1000), // -2 horas
+      },
+      {
+        usuarioId: usuario4.id,
+        paradaId: paradasCharles[1].id,
+        rutaId: rutaCharles.id,
+        estado: 'Pendiente',
+        horaSolicitud: new Date(Date.now() - 1 * 60 * 60 * 1000), // -1 hora
+      },
+      {
+        usuarioId: usuario2.id,
+        paradaId: paradasDuarte[0].id,
+        rutaId: rutaDuarte.id,
+        estado: 'Pendiente',
+        horaSolicitud: new Date(Date.now() - 3 * 60 * 60 * 1000), // -3 horas
+      },
+    ],
+  });
+
+  // Solicitudes confirmadas y completadas (históricas)
+  await prisma.solicitudParada.createMany({
+    data: [
+      {
+        usuarioId: usuario1.id,
+        paradaId: paradasCharles[0].id,
+        rutaId: rutaCharles.id,
+        estado: 'Confirmado',
+        horaSolicitud: new Date(Date.now() - 26 * 60 * 60 * 1000), // -26 horas (ayer)
+        notificado: true,
+      },
+      {
+        usuarioId: usuario2.id,
+        paradaId: paradasDuarte[1].id,
+        rutaId: rutaDuarte.id,
+        estado: 'Confirmado',
+        horaSolicitud: new Date(Date.now() - 48 * 60 * 60 * 1000), // -2 días
+        notificado: true,
+      },
+      {
+        usuarioId: usuario3.id,
+        paradaId: paradasCharles[2].id,
+        rutaId: rutaCharles.id,
+        estado: 'NoRecogido',
+        horaSolicitud: new Date(Date.now() - 50 * 60 * 60 * 1000), // -2 días
+        notificado: true,
+      },
+    ],
+  });
+
+  console.log('✅ 6 solicitudes de paradas creadas\n');
+
+  // ==================== HISTORIAL DE VIAJES ====================
+  console.log('🚍 Creando historial de viajes...');
+
+  // Viajes completados (últimos 7 días)
+  await prisma.historialViaje.createMany({
+    data: [
+      // Hoy
+      {
+        rutaId: rutaCharles.id,
+        vehiculoId: vehiculo1.id,
+        conductorId: conductor1.id,
+        usuarioId: usuario1.id,
+        fechaInicio: new Date(Date.now() - 2 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 1 * 60 * 60 * 1000),
+        duracionMinutos: 60,
+        pasajeros: 15,
+        paradasConfirmadas: 4,
+        estado: 'Completado',
+        calificacion: 5,
+      },
+      {
+        rutaId: rutaDuarte.id,
+        vehiculoId: vehiculo2.id,
+        conductorId: conductor2.id,
+        usuarioId: usuario2.id,
+        fechaInicio: new Date(Date.now() - 4 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 3 * 60 * 60 * 1000),
+        duracionMinutos: 55,
+        pasajeros: 12,
+        paradasConfirmadas: 3,
+        estado: 'Completado',
+        calificacion: 4,
+      },
+      // Hace 1 día
+      {
+        rutaId: rutaCharles.id,
+        vehiculoId: vehiculo1.id,
+        conductorId: conductor1.id,
+        usuarioId: usuario4.id,
+        fechaInicio: new Date(Date.now() - 26 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 25 * 60 * 60 * 1000),
+        duracionMinutos: 58,
+        pasajeros: 18,
+        paradasConfirmadas: 4,
+        estado: 'Completado',
+        calificacion: 5,
+      },
+      {
+        rutaId: rutaIndependencia.id,
+        vehiculoId: vehiculo3.id,
+        conductorId: conductor3.id,
+        usuarioId: usuario3.id,
+        fechaInicio: new Date(Date.now() - 27 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 26 * 60 * 60 * 1000),
+        duracionMinutos: 45,
+        pasajeros: 10,
+        paradasConfirmadas: 2,
+        estado: 'Completado',
+        calificacion: 4,
+      },
+      // Hace 2 días
+      {
+        rutaId: rutaDuarte.id,
+        vehiculoId: vehiculo2.id,
+        conductorId: conductor2.id,
+        fechaInicio: new Date(Date.now() - 50 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 49 * 60 * 60 * 1000),
+        duracionMinutos: 52,
+        pasajeros: 14,
+        paradasConfirmadas: 3,
+        estado: 'Completado',
+        calificacion: 5,
+      },
+      // Hace 3 días
+      {
+        rutaId: rutaCharles.id,
+        vehiculoId: vehiculo1.id,
+        conductorId: conductor1.id,
+        fechaInicio: new Date(Date.now() - 74 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 73 * 60 * 60 * 1000),
+        duracionMinutos: 62,
+        pasajeros: 20,
+        paradasConfirmadas: 4,
+        estado: 'Completado',
+        calificacion: 5,
+      },
+      {
+        rutaId: rutaEspecial.id,
+        vehiculoId: vehiculo5.id,
+        conductorId: conductor4.id,
+        fechaInicio: new Date(Date.now() - 75 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 74 * 60 * 60 * 1000),
+        duracionMinutos: 48,
+        pasajeros: 8,
+        paradasConfirmadas: 2,
+        estado: 'Completado',
+        calificacion: 4,
+      },
+      // Hace 5 días
+      {
+        rutaId: rutaDuarte.id,
+        vehiculoId: vehiculo2.id,
+        conductorId: conductor2.id,
+        fechaInicio: new Date(Date.now() - 122 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 121 * 60 * 60 * 1000),
+        duracionMinutos: 50,
+        pasajeros: 16,
+        paradasConfirmadas: 3,
+        estado: 'Completado',
+        calificacion: 5,
+      },
+      // Hace 6 días
+      {
+        rutaId: rutaIndependencia.id,
+        vehiculoId: vehiculo3.id,
+        conductorId: conductor3.id,
+        fechaInicio: new Date(Date.now() - 146 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 145 * 60 * 60 * 1000),
+        duracionMinutos: 43,
+        pasajeros: 11,
+        paradasConfirmadas: 2,
+        estado: 'Completado',
+        calificacion: 4,
+      },
+      // Hace 6 días - 1 cancelado (para testing de puntualidad)
+      {
+        rutaId: rutaCharles.id,
+        vehiculoId: vehiculo1.id,
+        conductorId: conductor1.id,
+        fechaInicio: new Date(Date.now() - 147 * 60 * 60 * 1000),
+        fechaFin: null,
+        duracionMinutos: null,
+        pasajeros: 0,
+        paradasConfirmadas: 0,
+        estado: 'Cancelado',
+        comentarios: 'Falla mecánica',
+      },
+      // Hace 10 días (para comparación anterior)
+      {
+        rutaId: rutaCharles.id,
+        vehiculoId: vehiculo1.id,
+        conductorId: conductor1.id,
+        fechaInicio: new Date(Date.now() - 242 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 241 * 60 * 60 * 1000),
+        duracionMinutos: 60,
+        pasajeros: 17,
+        paradasConfirmadas: 4,
+        estado: 'Completado',
+        calificacion: 5,
+      },
+      {
+        rutaId: rutaDuarte.id,
+        vehiculoId: vehiculo2.id,
+        conductorId: conductor2.id,
+        fechaInicio: new Date(Date.now() - 266 * 60 * 60 * 1000),
+        fechaFin: new Date(Date.now() - 265 * 60 * 60 * 1000),
+        duracionMinutos: 54,
+        pasajeros: 13,
+        paradasConfirmadas: 3,
+        estado: 'Completado',
+        calificacion: 4,
+      },
+    ],
+  });
+
+  console.log('✅ 12 viajes históricos creados\n');
+
   // ==================== RESUMEN ====================
   console.log('📊 Resumen del seed:\n');
 
@@ -524,6 +791,8 @@ async function main() {
     prisma.vehiculo.count(),
     prisma.usuario.count(),
     prisma.horario.count(),
+    prisma.solicitudParada.count(),
+    prisma.historialViaje.count(),
   ]);
 
   console.log(`  ✅ Estatus de Vehículos: ${counts[0]}`);
@@ -533,6 +802,8 @@ async function main() {
   console.log(`  ✅ Vehículos: ${counts[4]}`);
   console.log(`  ✅ Usuarios: ${counts[5]}`);
   console.log(`  ✅ Horarios: ${counts[6]}`);
+  console.log(`  ✅ Solicitudes: ${counts[7]}`);
+  console.log(`  ✅ Viajes: ${counts[8]}`);
 
   console.log('\n✅ ¡Seed completado exitosamente!\n');
 }

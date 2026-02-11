@@ -314,7 +314,7 @@ export default function ParadasPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Ubicación en el Mapa</label>
-                <MapPicker
+                <MapPickerLeaflet
                   initialLat={selectedLocation.lat}
                   initialLng={selectedLocation.lng}
                   onLocationSelect={handleLocationSelect}

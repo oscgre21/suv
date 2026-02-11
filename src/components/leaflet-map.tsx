@@ -4,24 +4,26 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Bus, MapPin } from 'lucide-react';
+import { Bus } from 'lucide-react';
 import ReactDOMServer from 'react-dom/server';
 
-// Mock data for bus locations
-const buses = [
-  { id: 'B-01', position: [18.4861, -69.9312] as L.LatLngExpression, popup: 'Bus 01 - En Ruta' },
-  { id: 'B-02', position: [18.49, -69.94] as L.LatLngExpression, popup: 'Bus 02 - Detenido' },
-  { id: 'B-03', position: [18.47, -69.92] as L.LatLngExpression, popup: 'Bus 03 - En Ruta' },
-  { id: 'B-04', position: [18.50, -69.91] as L.LatLngExpression, popup: 'Bus 04 - Retrasado' },
-];
+interface VehiculoGPS {
+  id: string;
+  ficha: string;
+  latitud: number;
+  longitud: number;
+  velocidad: number;
+  estado: string;
+  ruta: { nombre: string; color: string } | null;
+  ultimaActualizacion: string | null;
+}
 
-// Mock data for user locations
-const users = [
-    { id: 'U-01', position: [18.483, -69.935] as L.LatLngExpression, popup: 'Juan Perez' },
-    { id: 'U-02', position: [18.475, -69.915] as L.LatLngExpression, popup: 'Maria Rodriguez' },
-    { id: 'U-03', position: [18.495, -69.925] as L.LatLngExpression, popup: 'Carlos Gomez' },
-];
-
+interface LeafletMapProps {
+  vehiculos?: VehiculoGPS[];
+  isNotified?: boolean;
+  countdownSeconds?: number;
+  initialSeconds?: number;
+}
 
 const busIcon = new L.DivIcon({
   html: ReactDOMServer.renderToString(
@@ -38,19 +40,16 @@ const busIcon = new L.DivIcon({
   popupAnchor: [0, -16],
 });
 
-const userIcon = new L.DivIcon({
-  html: ReactDOMServer.renderToString(
-    <MapPin className="w-8 h-8 text-red-500 fill-red-500/30" />
-  ),
-  className: '',
-  iconSize: [32, 32],
-  iconAnchor: [16, 32], // Point of the pin
-  popupAnchor: [0, -32],
-});
+const getEstadoTexto = (estado: string, velocidad: number) => {
+  if (velocidad > 0) return 'En Ruta';
+  if (estado === 'Operativo') return 'Detenido';
+  return estado;
+};
 
-export function LeafletMap() {
+export function LeafletMap({ vehiculos = [] }: LeafletMapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
+    const markersRef = useRef<Map<string, L.Marker>>(new Map());
 
     useEffect(() => {
         // Initialize map only if the container exists and the map isn't already initialized.
@@ -65,29 +64,114 @@ export function LeafletMap() {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             }).addTo(map);
 
-            buses.forEach(bus => {
-                L.marker(bus.position, { icon: busIcon })
-                    .addTo(map)
-                    .bindPopup(bus.popup);
+            mapInstanceRef.current = map;
+        }
+
+        // Update markers with animation
+        if (mapInstanceRef.current && vehiculos && vehiculos.length > 0) {
+            const currentMarkers = markersRef.current;
+            const updatedVehicleIds = new Set<string>();
+
+            vehiculos.forEach(vehiculo => {
+                if (vehiculo.latitud && vehiculo.longitud) {
+                    updatedVehicleIds.add(vehiculo.id);
+                    const newLatLng: L.LatLngExpression = [vehiculo.latitud, vehiculo.longitud];
+
+                    if (currentMarkers.has(vehiculo.id)) {
+                        // Update existing marker with smooth animation
+                        const existingMarker = currentMarkers.get(vehiculo.id)!;
+                        const currentLatLng = existingMarker.getLatLng();
+
+                        // Only animate if position changed significantly (> 0.0001 degrees ~11 meters)
+                        const latDiff = Math.abs(currentLatLng.lat - vehiculo.latitud);
+                        const lngDiff = Math.abs(currentLatLng.lng - vehiculo.longitud);
+
+                        if (latDiff > 0.0001 || lngDiff > 0.0001) {
+                            // Animate marker movement
+                            animateMarker(existingMarker, currentLatLng, newLatLng);
+                        }
+
+                        // Update popup content
+                        const velocidad = vehiculo.velocidad ?? 0;
+                        const estado = getEstadoTexto(vehiculo.estado, velocidad);
+
+                        existingMarker.setPopupContent(`
+                            <div>
+                                <strong>${vehiculo.ficha}</strong><br/>
+                                Ruta: ${vehiculo.ruta?.nombre || 'Sin asignar'}<br/>
+                                Estado: ${estado}<br/>
+                                Velocidad: ${velocidad} km/h
+                            </div>
+                        `);
+                    } else {
+                        // Create new marker
+                        const marker = L.marker(newLatLng, { icon: busIcon })
+                            .addTo(mapInstanceRef.current!);
+
+                        const velocidad = vehiculo.velocidad ?? 0;
+                        const estado = getEstadoTexto(vehiculo.estado, velocidad);
+
+                        marker.bindPopup(`
+                            <div>
+                                <strong>${vehiculo.ficha}</strong><br/>
+                                Ruta: ${vehiculo.ruta?.nombre || 'Sin asignar'}<br/>
+                                Estado: ${estado}<br/>
+                                Velocidad: ${velocidad} km/h
+                            </div>
+                        `);
+
+                        currentMarkers.set(vehiculo.id, marker);
+                    }
+                }
             });
 
-            users.forEach(user => {
-                L.marker(user.position, { icon: userIcon })
-                    .addTo(map)
-                    .bindPopup(`Usuario: ${user.popup}`);
+            // Remove markers for vehicles that no longer exist
+            currentMarkers.forEach((marker, id) => {
+                if (!updatedVehicleIds.has(id)) {
+                    mapInstanceRef.current?.removeLayer(marker);
+                    currentMarkers.delete(id);
+                }
             });
-            
-            mapInstanceRef.current = map;
         }
 
         // Cleanup function to run when component is unmounted
         return () => {
             if (mapInstanceRef.current) {
+                markersRef.current.forEach(marker => {
+                    mapInstanceRef.current?.removeLayer(marker);
+                });
+                markersRef.current.clear();
                 mapInstanceRef.current.remove();
                 mapInstanceRef.current = null;
             }
         };
-    }, []); // Empty dependency array ensures this effect runs only once on mount
+    }, [vehiculos]); // Update when vehiculos change
+
+    // Smooth marker animation helper
+    const animateMarker = (marker: L.Marker, startLatLng: L.LatLng, endLatLng: L.LatLngExpression) => {
+        const duration = 1000; // 1 second animation
+        const frameRate = 60; // 60 FPS
+        const frames = duration / (1000 / frameRate);
+        let frame = 0;
+
+        const endLatLngObj = L.latLng(endLatLng);
+        const latStep = (endLatLngObj.lat - startLatLng.lat) / frames;
+        const lngStep = (endLatLngObj.lng - startLatLng.lng) / frames;
+
+        const animate = () => {
+            frame++;
+            if (frame <= frames) {
+                const newLat = startLatLng.lat + (latStep * frame);
+                const newLng = startLatLng.lng + (lngStep * frame);
+                marker.setLatLng([newLat, newLng]);
+                requestAnimationFrame(animate);
+            } else {
+                marker.setLatLng(endLatLng);
+            }
+        };
+
+        requestAnimationFrame(animate);
+    };
 
     return <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />;
 }
