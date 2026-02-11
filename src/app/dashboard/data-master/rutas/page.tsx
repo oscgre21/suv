@@ -1,152 +1,369 @@
-
 "use client";
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, PlusCircle, ArrowLeft, MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { rutaSchema, type RutaFormData } from '@/lib/validations';
+import { useApiList } from '@/hooks/use-api-list';
+import { useToast } from '@/hooks/use-toast';
+import type { RutaWithRelations } from '@/types';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-const routes = [
-  { 
-    id: 'RUTA-01', 
-    name: 'Ruta Charles de Gaulle', 
-    stops: 15, 
-    status: 'Activa',
-    stopList: [
-        "Parada 1: Av. Sabana Larga",
-        "Parada 2: Puente Juan Carlos",
-        "Parada 3: Estación Concepción Bona",
-        "Parada 4: Carretera Mella Km 8"
-    ]
-  },
-  { 
-    id: 'RUTA-02', 
-    name: 'Ruta Autopista Duarte', 
-    stops: 12, 
-    status: 'Activa',
-    stopList: [
-        "Parada 1: Km 9 Autopista Duarte",
-        "Parada 2: Av. John F. Kennedy",
-        "Parada 3: Plaza de la Bandera",
-    ]
-  },
-  { 
-    id: 'RUTA-03', 
-    name: 'Ruta Independencia', 
-    stops: 18, 
-    status: 'Activa',
-    stopList: [
-        "Parada 1: Parque Independencia",
-        "Parada 2: Malecón Center",
-        "Parada 3: Feria Ganadera",
-    ]
-  },
-  { 
-    id: 'RUTA-04', 
-    name: 'Ruta 27 de Febrero', 
-    stops: 22, 
-    status: 'Inactiva',
-    stopList: [
-        "Parada 1: Palacio Nacional",
-        "Parada 2: Agora Mall",
-        "Parada 3: Pinturas",
-    ]
-  },
-];
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PlusCircle, MoreHorizontal, Pencil, Trash2, Loader2, ArrowLeft, MapPin } from 'lucide-react';
 
-export default function RutasDataMasterPage() {
+export default function RutasPage() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [editingRuta, setEditingRuta] = useState<RutaWithRelations | null>(null);
+  const [deletingRutaId, setDeletingRutaId] = useState<string | null>(null);
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const {
+    items: rutas,
+    isLoading,
+    createItem,
+    updateItem,
+    deleteItem,
+  } = useApiList<RutaWithRelations>({
+    endpoint: '/api/rutas',
+  });
+
+  const form = useForm<RutaFormData>({
+    resolver: zodResolver(rutaSchema),
+    defaultValues: {
+      nombre: '',
+      descripcion: '',
+      color: '#3b82f6',
+      activa: true,
+      esEspecial: false,
+    },
+  });
+
+  const handleOpenDialog = (ruta?: RutaWithRelations) => {
+    if (ruta) {
+      setEditingRuta(ruta);
+      form.reset({
+        nombre: ruta.nombre,
+        descripcion: ruta.descripcion || '',
+        color: ruta.color,
+        activa: ruta.activa,
+        esEspecial: ruta.esEspecial,
+      });
+    } else {
+      setEditingRuta(null);
+      form.reset({
+        nombre: '',
+        descripcion: '',
+        color: '#3b82f6',
+        activa: true,
+        esEspecial: false,
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const onSubmit = async (data: RutaFormData) => {
+    try {
+      if (editingRuta) {
+        await updateItem(editingRuta.id, data);
+        toast({
+          title: '✅ Ruta actualizada',
+          description: `${data.nombre} ha sido actualizada exitosamente.`,
+        });
+      } else {
+        await createItem(data);
+        toast({
+          title: '✅ Ruta creada',
+          description: `${data.nombre} ha sido registrada exitosamente.`,
+        });
+      }
+
+      setIsDialogOpen(false);
+      form.reset();
+    } catch (error) {
+      console.error('Error saving ruta:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingRutaId) return;
+
+    try {
+      await deleteItem(deletingRutaId);
+      toast({
+        title: '✅ Ruta eliminada',
+        description: 'La ruta ha sido eliminada exitosamente.',
+      });
+      setIsDeleteDialogOpen(false);
+      setDeletingRutaId(null);
+    } catch (error) {
+      console.error('Error deleting ruta:', error);
+    }
+  };
+
+  const getEstadoBadge = (activa: boolean) => {
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                     <Button asChild variant="outline" size="icon">
-                        <Link href="/dashboard/data-master">
-                            <ArrowLeft className="h-4 w-4" />
-                            <span className="sr-only">Volver</span>
-                        </Link>
-                    </Button>
-                    <h1 className="text-3xl font-bold font-headline">Data Master: Rutas</h1>
-                </div>
-                <Button className="bg-accent hover:bg-accent/90">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Crear Ruta
-                </Button>
-            </div>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle>Rutas</CardTitle>
-                    <CardDescription>Gestione las rutas del sistema de transporte. Haz clic en una fila para ver las paradas.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nombre de Ruta</TableHead>
-                                <TableHead>ID Ruta</TableHead>
-                                <TableHead>Nro. de Paradas</TableHead>
-                                <TableHead>Estado</TableHead>
-                                <TableHead><span className="sr-only">Acciones</span></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {routes.map((route) => (
-                                <Collapsible asChild key={route.id}>
-                                    <>
-                                        <CollapsibleTrigger asChild>
-                                            <TableRow className="cursor-pointer hover:bg-muted/50 data-[state=open]:bg-muted/50">
-                                                <TableCell className="font-medium">{route.name}</TableCell>
-                                                <TableCell>{route.id}</TableCell>
-                                                <TableCell>{route.stops}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={route.status === 'Activa' ? 'default' : 'secondary'}>{route.status}</Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={(e) => e.stopPropagation()}>Editar</DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={(e) => e.stopPropagation()}>Gestionar Paradas</DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>Eliminar</DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        </CollapsibleTrigger>
-                                        <CollapsibleContent asChild>
-                                             <TableRow>
-                                                <TableCell colSpan={5} className="p-0">
-                                                    <div className="p-6 bg-muted/30">
-                                                        <h4 className="text-md font-semibold mb-3">Paradas de la Ruta</h4>
-                                                        <ul className="space-y-2">
-                                                            {route.stopList.map(stop => (
-                                                                <li key={stop} className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                                    <MapPin className="h-4 w-4 text-primary/70" />
-                                                                    <span>{stop}</span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        </CollapsibleContent>
-                                    </>
-                                </Collapsible>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </div>
+      <Badge variant={activa ? 'default' : 'secondary'}>
+        {activa ? 'Activa' : 'Inactiva'}
+      </Badge>
     );
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button asChild variant="outline" size="icon">
+            <Link href="/dashboard/data-master">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Volver</span>
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-bold font-headline">Data Master: Rutas</h1>
+        </div>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => handleOpenDialog()} className="bg-accent hover:bg-accent/90">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Añadir Ruta
+            </Button>
+          </DialogTrigger>
+
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {editingRuta ? 'Editar Ruta' : 'Añadir Nueva Ruta'}
+              </DialogTitle>
+            </DialogHeader>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre de la Ruta</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ej: Ruta Charles de Gaulle" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="descripcion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descripción (Opcional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Descripción de la ruta..."
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Color (para visualización en mapa)</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2 items-center">
+                          <Input type="color" {...field} className="w-20 h-10" />
+                          <Input
+                            type="text"
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="#3b82f6"
+                            className="flex-1"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="activa"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Ruta Activa</FormLabel>
+                          <FormDescription>
+                            La ruta está en operación
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="esEspecial"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Ruta Especial</FormLabel>
+                          <FormDescription>
+                            Ruta temporal o especial
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Button type="submit" className="w-full">
+                  {editingRuta ? 'Actualizar Ruta' : 'Guardar Ruta'}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Rutas Registradas</CardTitle>
+          <CardDescription>Gestione las rutas del sistema de transporte.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : rutas.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              No hay rutas registradas
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead>Paradas</TableHead>
+                  <TableHead>Vehículos</TableHead>
+                  <TableHead>Usuarios</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rutas.map((ruta) => (
+                  <TableRow key={ruta.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: ruta.color }}
+                        />
+                        {ruta.nombre}
+                        {ruta.esEspecial && (
+                          <Badge variant="outline" className="ml-2">Especial</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {ruta.descripcion || '-'}
+                    </TableCell>
+                    <TableCell>{ruta._count?.paradas || 0} paradas</TableCell>
+                    <TableCell>{ruta._count?.vehiculos || 0} vehículos</TableCell>
+                    <TableCell>{ruta._count?.usuarios || 0} usuarios</TableCell>
+                    <TableCell>{getEstadoBadge(ruta.activa)}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleOpenDialog(ruta)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => router.push(`/dashboard/data-master/rutas/${ruta.id}/paradas`)}
+                          >
+                            <MapPin className="mr-2 h-4 w-4" />
+                            Gestionar Paradas
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                              setDeletingRutaId(ruta.id);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. La ruta será eliminada permanentemente junto con todas sus paradas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 }

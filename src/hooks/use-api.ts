@@ -80,7 +80,7 @@ export function useApi<T = any>(options?: UseApiOptions) {
     } finally {
       setIsLoading(false);
     }
-  }, [options, toast]);
+  }, [toast]);
 
   const reset = useCallback(() => {
     setData(null);

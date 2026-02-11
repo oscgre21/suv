@@ -75,7 +75,8 @@ export function useApiList<T = any>(options: UseApiListOptions<T>) {
     if (autoFetch) {
       fetchItems();
     }
-  }, [fetchItems, autoFetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint, filters, autoFetch]);
 
   return {
     items,
