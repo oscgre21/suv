@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await execute('/api/auth/logout', 'POST');
       setUsuario(null);
-      router.push('/login');
+      router.push('/');
     } catch (error) {
       console.error('Error en logout:', error);
     }
