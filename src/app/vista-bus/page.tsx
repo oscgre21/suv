@@ -542,7 +542,7 @@ export default function VistaBusPage() {
                             </div>
                         </div>
                          <div className="text-center text-xs text-white/50 pt-4">
-                            Dirección de Tecnología y Comunicaciones del CESAC - Versión 1.0 - @ 2025
+                            Dirección de Tecnología y Comunicaciones del CESAC - Versión 1.0 - @ 2026
                         </div>
                     </motion.footer>
                 </div>

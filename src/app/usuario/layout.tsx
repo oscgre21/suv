@@ -101,7 +101,7 @@ function UsuarioLayoutContent({ children }: { children: React.ReactNode }) {
                 ))}
             </nav>
             <div className="pb-2 text-center text-xs text-muted-foreground">
-                Dirección de Tecnología y Comunicaciones del CESAC - Versión 1.0 - @ 2025
+                Dirección de Tecnología y Comunicaciones del CESAC - Versión 1.0 - @ 2026
             </div>
         </footer>
     </div>

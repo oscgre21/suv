@@ -296,7 +296,7 @@ export default function DashboardLayout({
               {children}
             </main>
             <footer className="shrink-0 border-t bg-background/95 p-2 text-center text-xs text-muted-foreground backdrop-blur-sm">
-              Dirección de Tecnología y Comunicaciones del CESAC - Versión 1.0 - @ 2025
+              Dirección de Tecnología y Comunicaciones del CESAC - Versión 1.0 - @ 2026
             </footer>
           </div>
         </SidebarInset>

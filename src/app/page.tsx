@@ -146,30 +146,17 @@ export default function LoginPage() {
                <Button type="submit" className="w-full h-12 text-base font-bold" disabled={isLoading}>
                 {isLoading ? 'Accediendo...' : 'Acceder al Panel Principal'}
               </Button>
-                <Button
-                  variant="outline"
-                  className="w-full h-12 text-base font-bold"
-                  type="button"
-                  onClick={() => router.push('/usuario')}
-                  disabled={isLoading}
-                >
-                    <User className="mr-2 h-5 w-5" />
-                    Continuar como Invitado
-                </Button>
+  
             </div>
 
-            <div className="text-center text-sm">
-              <Link href="/usuario" className="font-medium text-primary hover:underline flex items-center justify-center gap-1">
-                Vista de Usuario Móvil <ChevronsRight className="h-4 w-4" />
-              </Link>
-            </div>
+ 
 
  
           </form>
         </div>
       </main>
       <footer className="relative z-10 p-2 text-center text-xs text-white/80 bg-black/20 backdrop-blur-sm rounded-t-lg">
-        Dirección de Tecnología y Comunicaciones del CESAC - Versión 1.0 - @ 2025
+        Dirección de Tecnología y Comunicaciones del CESAC - Versión 1.0 - @ 2026
       </footer>
     </div>
   );
