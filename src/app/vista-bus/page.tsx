@@ -1,12 +1,13 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Siren, Wifi, WifiOff, Play, Square, Timer, Mic, LayoutDashboard } from 'lucide-react';
-import { useUsuario } from '@/app/usuario/usuario-provider';
+import { Siren, Wifi, WifiOff, Play, Square, Timer, Mic, LayoutDashboard, Loader2 } from 'lucide-react';
 import { playSuccessSound } from '@/lib/audio';
+import { useApi } from '@/hooks/use-api';
+import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,17 +93,27 @@ const StatusButton = ({ children, status, currentStatus, setStatus, className, I
     );
 };
 
-const stops = [
-    "Av. Charles De Gaulle cruse de Invivienda",
-    "Av. Charles De Gaulle las Americas",
-    "Av. Las Americas Puente Juan Carlos",
-    "Av. Las Americas KM-12 Los Frailes",
-    "Av. Las Americas Parada Hipodromo"
-];
+interface ConductorInfo {
+    id: string;
+    nombre: string;
+    cedula: string;
+    turno: string;
+    vehiculo: {
+        id: string;
+        ficha: string;
+        capacidad: number;
+        ruta: {
+            nombre: string;
+        } | null;
+    } | null;
+}
 
-const busIdToControl = "BUSCESAC-1";
-const INITIAL_PASSENGERS = 15;
-const INITIAL_REQUESTED = 6;
+interface Parada {
+    id: string;
+    nombre: string;
+    direccion: string;
+    orden: number;
+}
 
 const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -112,14 +123,18 @@ const formatTime = (totalSeconds: number) => {
 };
 
 export default function VistaBusPage() {
-    const { buses, updateBusStatus } = useUsuario();
-    const currentBus = buses.find(b => b.id === busIdToControl);
-    const status = currentBus?.status || 'En Ruta';
+    const { execute } = useApi();
+    const { toast } = useToast();
+
+    const [conductor, setConductor] = useState<ConductorInfo | null>(null);
+    const [paradas, setParadas] = useState<Parada[]>([]);
+    const [solicitudesPorParada, setSolicitudesPorParada] = useState<Record<string, number>>({});
+    const [isLoading, setIsLoading] = useState(true);
+    const [status, setStatus] = useState('En Ruta');
 
     const [isOnline, setIsOnline] = useState(true);
     const [currentStopIndex, setCurrentStopIndex] = useState(0);
-    const [passengersOnBoard, setPassengersOnBoard] = useState(INITIAL_PASSENGERS);
-    const [requestedStops, setRequestedStops] = useState(INITIAL_REQUESTED);
+    const [passengersOnBoard, setPassengersOnBoard] = useState(0);
     
     const [isRouteActive, setIsRouteActive] = useState(false);
     const [elapsedTime, setElapsedTime] = useState(0);
@@ -129,7 +144,50 @@ export default function VistaBusPage() {
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [audioCache, setAudioCache] = useState<Record<string, string>>({});
     const audioRef = useRef<HTMLAudioElement>(null);
-    
+
+    // Cargar datos del conductor
+    const loadConductorData = useCallback(async () => {
+        try {
+            setIsLoading(true);
+
+            const [conductorData, paradasData, solicitudesData] = await Promise.all([
+                execute('/api/conductores/me', 'GET'),
+                execute('/api/conductores/me/paradas', 'GET'),
+                execute('/api/conductores/me/solicitudes', 'GET'),
+            ]);
+
+            setConductor(conductorData);
+            setParadas(paradasData);
+            setSolicitudesPorParada(solicitudesData);
+
+            // Inicializar pasajeros a bordo con la capacidad del vehículo
+            if (conductorData.vehiculo?.capacidad) {
+                setPassengersOnBoard(Math.floor(conductorData.vehiculo.capacidad * 0.4)); // 40% inicial
+            }
+        } catch (error) {
+            console.error('Error cargando datos del conductor:', error);
+            toast({
+                title: 'Error',
+                description: 'No se pudieron cargar los datos del conductor',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [execute, toast]);
+
+    useEffect(() => {
+        loadConductorData();
+
+        // Auto-refresh de solicitudes cada 30 segundos
+        const interval = setInterval(() => {
+            execute('/api/conductores/me/solicitudes', 'GET')
+                .then(data => setSolicitudesPorParada(data))
+                .catch(err => console.error('Error refreshing solicitudes:', err));
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [loadConductorData, execute]);
 
     useEffect(() => {
         if (isRouteActive) {
@@ -157,8 +215,13 @@ export default function VistaBusPage() {
     const handleFinishRoute = () => {
         setIsRouteActive(false);
         setTripDuration(formatTime(elapsedTime));
-        setPassengersOnBoard(INITIAL_PASSENGERS);
-        setRequestedStops(INITIAL_REQUESTED);
+
+        // Resetear a estado inicial
+        const initialPassengers = conductor?.vehiculo?.capacidad
+            ? Math.floor(conductor.vehiculo.capacidad * 0.4)
+            : 15;
+
+        setPassengersOnBoard(initialPassengers);
         setCurrentStopIndex(0);
     };
     
@@ -193,24 +256,35 @@ export default function VistaBusPage() {
     };
 
     const handleConfirmStop = () => {
+        if (!paradas[currentStopIndex]) return;
+
         playSuccessSound();
-        setPassengersOnBoard(prevOnBoard => prevOnBoard + requestedStops);
-        const newRequestedStops = Math.floor(Math.random() * 11) + 2;
-        setRequestedStops(newRequestedStops);
-        
-        const nextStopIndex = (currentStopIndex + 1) % stops.length;
+
+        // Agregar pasajeros esperando en la parada actual
+        const currentStopRequests = solicitudesPorParada[paradas[currentStopIndex].id] || 0;
+        setPassengersOnBoard(prevOnBoard => prevOnBoard + currentStopRequests);
+
+        // Avanzar a siguiente parada
+        const nextStopIndex = (currentStopIndex + 1) % paradas.length;
         setCurrentStopIndex(nextStopIndex);
 
+        // Anunciar siguiente parada
         setTimeout(() => {
-            const nextStopText = `Siguiente parada: ${stops[nextStopIndex]}`;
-            if (nextStopText) {
+            if (paradas[nextStopIndex]) {
+                const nextStopText = `Siguiente parada: ${paradas[nextStopIndex].nombre}`;
                 handleTTS(nextStopText);
             }
         }, 3000);
+
+        // Actualizar solicitudes
+        execute('/api/conductores/me/solicitudes', 'GET')
+            .then(data => setSolicitudesPorParada(data))
+            .catch(err => console.error('Error refreshing solicitudes:', err));
     };
 
     const handleSetStatus = (newStatus: string) => {
-        updateBusStatus(busIdToControl, newStatus);
+        setStatus(newStatus);
+        // TODO: Actualizar estado del vehículo en la base de datos
     };
 
     useEffect(() => {
@@ -230,11 +304,36 @@ export default function VistaBusPage() {
         };
     }, []);
 
+    if (isLoading) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-gray-800">
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+            </div>
+        );
+    }
+
+    if (!conductor || !conductor.vehiculo) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-gray-800">
+                <div className="text-center text-white">
+                    <p className="text-xl">No hay vehículo asignado</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                        Contacta al administrador para asignar un vehículo
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    const currentStopRequests = paradas[currentStopIndex]
+        ? solicitudesPorParada[paradas[currentStopIndex].id] || 0
+        : 0;
+
     return (
         <>
         <div className="flex justify-center items-center min-h-screen bg-gray-800">
-            <div 
-                className="font-body text-white w-full h-full" 
+            <div
+                className="font-body text-white w-full h-full"
             >
                 <div className="flex flex-col min-h-screen p-4 sm:p-6 md:p-8">
                     <style jsx global>{`
@@ -294,9 +393,9 @@ export default function VistaBusPage() {
                         >
                              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 md:p-6 shadow-lg">
                                 <h2 className="text-base md:text-lg font-semibold text-gray-300 uppercase tracking-wider">Chofer en turno</h2>
-                                <p className="text-2xl md:text-3xl font-bold text-white mt-1">Manuel Gonzalez</p>
-                                <p className="text-sm text-gray-400">CESAC-CH-001 - Activo</p>
-                                <p className="text-sm text-gray-400 mt-1">Ruta Charles de Gaulle | Matutino</p>
+                                <p className="text-2xl md:text-3xl font-bold text-white mt-1">{conductor.nombre}</p>
+                                <p className="text-sm text-gray-400">{conductor.cedula} - Activo</p>
+                                <p className="text-sm text-gray-400 mt-1">Ruta {conductor.vehiculo?.ruta?.nombre || 'Sin ruta'} | {conductor.turno}</p>
                             </div>
 
                             <motion.button 
@@ -321,11 +420,16 @@ export default function VistaBusPage() {
                                 whileHover={{ y: -5, transition: { duration: 0.2 } }}
                             >
                                 <h2 className="text-xl md:text-2xl font-bold text-gray-300 uppercase tracking-wider">Siguiente parada</h2>
-                                <p className="text-3xl md:text-4xl font-semibold text-white mt-2 md:mt-4">{isRouteActive ? stops[currentStopIndex] : "---"}</p>
+                                <p className="text-3xl md:text-4xl font-semibold text-white mt-2 md:mt-4">
+                                    {isRouteActive && paradas[currentStopIndex]
+                                        ? paradas[currentStopIndex].nombre
+                                        : "---"
+                                    }
+                                </p>
                             </MotionCard>
                             <div className={cn("grid grid-cols-2 gap-4 md:gap-6 transition-opacity", !isRouteActive && "opacity-50")}>
                                 <InfoCard title="A Bordo" value={isRouteActive ? passengersOnBoard : "--"} valueClassName="text-cyan-300" />
-                                <InfoCard title="Paradas Solicitadas" value={isRouteActive ? requestedStops.toString().padStart(2, '0') : "--"} valueClassName="text-yellow-300" />
+                                <InfoCard title="Paradas Solicitadas" value={isRouteActive ? currentStopRequests.toString().padStart(2, '0') : "--"} valueClassName="text-yellow-300" />
                             </div>
                              <div className="grid grid-cols-2 gap-4">
                                 <motion.button 
@@ -401,7 +505,7 @@ export default function VistaBusPage() {
                             </div>
                         </div>
                          <div className="text-center text-xs text-white/50 pt-4">
-                            Dirección de Tecnología y Comunicaciones del CESAC - by Kendy Qualey - Versión 1.0 - @ 2025
+                            Dirección de Tecnología y Comunicaciones del CESAC - Versión 1.0 - @ 2025
                         </div>
                     </motion.footer>
                 </div>

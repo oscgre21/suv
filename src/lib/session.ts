@@ -6,10 +6,13 @@ const secret = new TextEncoder().encode(
 );
 
 export interface SessionData {
-  userId: string;
+  userId?: string;           // Para usuarios
+  conductorId?: string;      // Para conductores
+  tipo: 'usuario' | 'conductor';
   nombre: string;
   email: string;
-  rutaAsignada: string | null;
+  rutaAsignada?: string | null;
+  vehiculoId?: string | null;
 }
 
 export async function createSession(data: SessionData): Promise<string> {

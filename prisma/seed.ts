@@ -309,7 +309,19 @@ async function main() {
     },
   });
 
-  console.log('✅ 5 conductores creados\n');
+  const conductor6 = await prisma.conductor.create({
+    data: {
+      nombre: 'Juan Carlos Pérez',
+      cedula: '004-1234567-9',
+      licencia: 'LIC-2023-007890',
+      telefono: '809-555-1001',
+      email: 'juan.perez@empresa.com',
+      turno: 'Matutino',
+      estado: 'Activo',
+    },
+  });
+
+  console.log('✅ 6 conductores creados\n');
 
   // ==================== VEHÍCULOS ====================
   console.log('🚌 Creando vehículos con datos GPS...');
@@ -395,11 +407,6 @@ async function main() {
   console.log('🔗 Asignando conductores a vehículos...');
 
   await prisma.conductor.update({
-    where: { id: conductor1.id },
-    data: { vehiculoId: vehiculo1.id },
-  });
-
-  await prisma.conductor.update({
     where: { id: conductor2.id },
     data: { vehiculoId: vehiculo2.id },
   });
@@ -414,6 +421,12 @@ async function main() {
     data: { vehiculoId: vehiculo5.id },
   });
 
+  // Asignar Juan Pérez al vehículo 1 (Ruta Charles de Gaulle)
+  await prisma.conductor.update({
+    where: { id: conductor6.id },
+    data: { vehiculoId: vehiculo1.id },
+  });
+
   console.log('✅ 4 conductores asignados a vehículos\n');
 
   // ==================== USUARIOS ====================
@@ -423,19 +436,6 @@ async function main() {
   const defaultPassword = await bcrypt.hash('password123', 10);
 
   const usuario1 = await prisma.usuario.create({
-    data: {
-      nombre: 'Juan Carlos Pérez',
-      cedula: '004-1234567-9',
-      email: 'juan.perez@empresa.com',
-      password: defaultPassword,
-      telefono: '809-555-1001',
-      direccion: 'Sabana Larga, Santo Domingo Oeste',
-      rutaAsignada: rutaCharles.id,
-      estado: 'Activo',
-    },
-  });
-
-  const usuario2 = await prisma.usuario.create({
     data: {
       nombre: 'María Rodríguez Santos',
       cedula: '004-9876543-2',
@@ -448,7 +448,7 @@ async function main() {
     },
   });
 
-  const usuario3 = await prisma.usuario.create({
+  const usuario2 = await prisma.usuario.create({
     data: {
       nombre: 'Ana María López',
       cedula: '005-2345678-0',
@@ -461,7 +461,7 @@ async function main() {
     },
   });
 
-  const usuario4 = await prisma.usuario.create({
+  const usuario3 = await prisma.usuario.create({
     data: {
       nombre: 'Roberto Martínez García',
       cedula: '005-8765432-1',
@@ -474,7 +474,7 @@ async function main() {
     },
   });
 
-  const usuario5 = await prisma.usuario.create({
+  const usuario4 = await prisma.usuario.create({
     data: {
       nombre: 'Carmen Julia Fernández',
       cedula: '006-3456789-1',
@@ -487,7 +487,7 @@ async function main() {
     },
   });
 
-  console.log('✅ 5 usuarios creados (password: password123)\n');
+  console.log('✅ 4 usuarios creados (password: password123)\n');
 
   // ==================== HORARIOS ====================
   console.log('⏰ Creando horarios...');
@@ -565,7 +565,7 @@ async function main() {
         horaSolicitud: new Date(Date.now() - 2 * 60 * 60 * 1000), // -2 horas
       },
       {
-        usuarioId: usuario4.id,
+        usuarioId: usuario3.id,
         paradaId: paradasCharles[1].id,
         rutaId: rutaCharles.id,
         estado: 'Pendiente',
@@ -601,7 +601,7 @@ async function main() {
         notificado: true,
       },
       {
-        usuarioId: usuario3.id,
+        usuarioId: usuario2.id,
         paradaId: paradasCharles[2].id,
         rutaId: rutaCharles.id,
         estado: 'NoRecogido',
@@ -651,7 +651,7 @@ async function main() {
         rutaId: rutaCharles.id,
         vehiculoId: vehiculo1.id,
         conductorId: conductor1.id,
-        usuarioId: usuario4.id,
+        usuarioId: usuario3.id,
         fechaInicio: new Date(Date.now() - 26 * 60 * 60 * 1000),
         fechaFin: new Date(Date.now() - 25 * 60 * 60 * 1000),
         duracionMinutos: 58,
@@ -664,7 +664,7 @@ async function main() {
         rutaId: rutaIndependencia.id,
         vehiculoId: vehiculo3.id,
         conductorId: conductor3.id,
-        usuarioId: usuario3.id,
+        usuarioId: usuario2.id,
         fechaInicio: new Date(Date.now() - 27 * 60 * 60 * 1000),
         fechaFin: new Date(Date.now() - 26 * 60 * 60 * 1000),
         duracionMinutos: 45,

@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const session = request.cookies.get('session')?.value;
 
-  const protectedPaths = ['/dashboard', '/dashboard/usuario'];
+  const protectedPaths = ['/dashboard', '/dashboard/usuario', '/vista-bus'];
   const isProtectedPath = protectedPaths.some(path =>
     request.nextUrl.pathname.startsWith(path)
   );
@@ -17,5 +17,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/dashboard/:path*', '/vista-bus/:path*'],
 };

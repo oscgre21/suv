@@ -245,8 +245,10 @@ export default function UsuariosPage() {
                         <FormItem>
                           <FormLabel>Ruta Asignada</FormLabel>
                           <Select
-                            onValueChange={field.onChange}
-                            value={field.value || ''}
+                            onValueChange={(value) => {
+                              field.onChange(value === 'none' ? null : value);
+                            }}
+                            value={field.value || 'none'}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -254,7 +256,7 @@ export default function UsuariosPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Sin ruta</SelectItem>
+                              <SelectItem value="none">Sin ruta</SelectItem>
                               {rutas.map((ruta) => (
                                 <SelectItem key={ruta.id} value={ruta.id}>
                                   {ruta.nombre}
