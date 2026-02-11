@@ -125,6 +125,17 @@ Una vez completado el despliegue:
 
 **Solución**: Verifica que agregaste la variable de entorno `DATABASE_URL` en la configuración de Dokploy.
 
+### Error: "The datasource.url property is required in your Prisma config file"
+
+Este error ocurre porque el proyecto usa Prisma 7 con `prisma.config.ts` y necesita que las variables de entorno estén disponibles durante las migraciones.
+
+**Solución implementada**: El `start.sh` ahora crea automáticamente un archivo `.env` temporal antes de ejecutar las migraciones, asegurando que Prisma pueda leer la variable `DATABASE_URL`. El archivo se elimina después de las migraciones por seguridad.
+
+Si aún ves este error, verifica que:
+1. La variable `DATABASE_URL` está correctamente configurada en Dokploy
+2. La variable se está pasando correctamente al contenedor
+3. El formato de la URL es correcto: `postgresql://usuario:password@host:puerto/database`
+
 ### Error: "Can't reach database server"
 
 **Posibles causas**:
