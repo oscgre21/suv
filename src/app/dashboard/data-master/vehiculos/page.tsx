@@ -262,8 +262,8 @@ export default function VehiculosPage() {
                     <FormItem>
                       <FormLabel>Ruta Asignada (Opcional)</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ''}
+                        onValueChange={(value) => field.onChange(value === "__none__" ? null : value)}
+                        value={field.value || "__none__"}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -271,7 +271,7 @@ export default function VehiculosPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Sin ruta</SelectItem>
+                          <SelectItem value="__none__">Sin ruta</SelectItem>
                           {rutas.map((ruta) => (
                             <SelectItem key={ruta.id} value={ruta.id}>
                               {ruta.nombre}
