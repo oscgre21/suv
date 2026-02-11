@@ -31,6 +31,7 @@ export async function GET() {
         velocidad: true,
         latitud: true,
         longitud: true,
+        pasajerosABordo: true,
         ultimaActualizacion: true,
         ruta: {
           select: {
