@@ -3,6 +3,10 @@ const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
+const pg = require('pg');
+
+const { Pool } = pg;
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -11,7 +15,16 @@ const port = 9002;
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
+// Crear pool de conexiones PostgreSQL y adapter
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: false,
+});
+
+const adapter = new PrismaPg(pool);
+
 const prisma = new PrismaClient({
+  adapter,
   log: dev ? ['query', 'error', 'warn'] : ['error'],
 });
 

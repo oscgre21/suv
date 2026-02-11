@@ -44,8 +44,9 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/server.js ./server.js
 COPY --from=builder /app/start.sh ./start.sh
 
-# Copiar el schema de Prisma
+# Copiar el schema de Prisma y su configuración
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 # Copiar build de Next.js
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next

@@ -13,23 +13,16 @@ fi
 echo "✓ Variables de entorno validadas"
 echo "DATABASE_URL: ${DATABASE_URL%%@*}@***" # Ocultar password
 
-# Exportar DATABASE_URL explícitamente para Prisma
-export DATABASE_URL="${DATABASE_URL}"
-
-# Crear archivo .env temporal para que prisma.config.ts pueda leerlo
-echo "DATABASE_URL=${DATABASE_URL}" > .env
-echo "✓ Archivo .env temporal creado"
-
 echo ""
 echo "Esperando a que la base de datos esté disponible..."
 # Opcional: agregar un wait-for script aquí si es necesario
 
 echo ""
 echo "Ejecutando migraciones de Prisma..."
+# Las variables de entorno ya están disponibles en el sistema
+# Solo necesitamos asegurar que estén exportadas
+export DATABASE_URL="${DATABASE_URL}"
 npx prisma migrate deploy
-
-# Limpiar archivo .env temporal
-rm -f .env
 
 echo ""
 echo "✓ Migraciones completadas exitosamente"
