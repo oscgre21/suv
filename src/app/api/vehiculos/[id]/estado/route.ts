@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { eventBus } from '@/lib/event-bus';
 
 export async function PATCH(
   request: Request,
@@ -48,10 +49,30 @@ export async function PATCH(
       },
       select: {
         id: true,
+        ficha: true,
         estado: true,
+        velocidad: true,
+        latitud: true,
+        longitud: true,
         ultimaActualizacion: true,
+        rutaAsignada: true,
+        ruta: {
+          select: {
+            nombre: true,
+            color: true,
+          },
+        },
       },
     });
+
+    // Emitir evento para notificar a usuarios conectados
+    eventBus.emit('vehiculo-update', {
+      ...vehiculo,
+      proximaParada: null,
+      tiempoEstimado: null,
+    });
+
+    console.log(`[SSE] Emitido evento vehiculo-update para ${vehiculo.ficha} - Estado: ${vehiculo.estado}`);
 
     return NextResponse.json(vehiculo);
   } catch (error) {

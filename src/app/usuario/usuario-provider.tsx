@@ -112,12 +112,90 @@ function UsuarioProviderContent({ children }: { children: React.ReactNode }) {
         }
     }, [usuario, execute, toast, selectedBusId]);
 
+    // Conectar a SSE para actualizaciones en tiempo real
+    useEffect(() => {
+        if (!usuario) return;
+
+        let eventSource: EventSource | null = null;
+
+        try {
+            eventSource = new EventSource('/api/usuarios/me/vehiculos/stream');
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const updatedVehiculo = JSON.parse(event.data);
+
+                    console.log('[SSE] Recibida actualización:', updatedVehiculo);
+
+                    // Actualizar el vehículo en el estado local
+                    setBuses(prevBuses => {
+                        const index = prevBuses.findIndex(b => b.id === updatedVehiculo.id);
+                        if (index !== -1) {
+                            const newBuses = [...prevBuses];
+                            newBuses[index] = {
+                                ...newBuses[index],
+                                ...updatedVehiculo,
+                            };
+                            return newBuses;
+                        }
+                        // Si es un vehículo nuevo que cumple con los filtros, agregarlo
+                        return [...prevBuses, updatedVehiculo];
+                    });
+
+                    // Mostrar notificación solo si es el bus seleccionado
+                    if (selectedBusId === updatedVehiculo.id) {
+                        const estadoMessages: Record<string, string> = {
+                            'En Ruta': '🚌 El bus está en ruta',
+                            'Operativo': '✅ El bus está operativo',
+                            'Retrasado': '⏰ El bus está retrasado',
+                            'Dañado': '⚠️ El bus está dañado',
+                            '911': '🚨 Emergencia en el bus',
+                        };
+
+                        toast({
+                            title: 'Actualización del bus',
+                            description: estadoMessages[updatedVehiculo.estado] || `Estado: ${updatedVehiculo.estado}`,
+                        });
+                    }
+                } catch (error) {
+                    console.error('[SSE] Error parseando evento:', error);
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('[SSE] Error en conexión:', error);
+                eventSource?.close();
+
+                // Reintentar conexión después de 5 segundos
+                setTimeout(() => {
+                    console.log('[SSE] Reintentando conexión...');
+                    fetchData(); // Refetch completo como fallback
+                }, 5000);
+            };
+
+            eventSource.onopen = () => {
+                console.log('[SSE] Conexión establecida');
+            };
+
+        } catch (error) {
+            console.error('[SSE] Error creando EventSource:', error);
+        }
+
+        // Cleanup al desmontar
+        return () => {
+            if (eventSource) {
+                console.log('[SSE] Cerrando conexión');
+                eventSource.close();
+            }
+        };
+    }, [usuario, selectedBusId, toast, fetchData]);
+
     useEffect(() => {
         if (usuario) {
             fetchData();
 
-            // Auto-refresh cada 10 segundos
-            const interval = setInterval(fetchData, 10000);
+            // Polling cada 60 segundos como fallback
+            const interval = setInterval(fetchData, 60000);
             return () => clearInterval(interval);
         }
     }, [usuario, fetchData]);
