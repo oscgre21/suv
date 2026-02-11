@@ -9,7 +9,7 @@
 
 CESAC es un sistema integral de gestión y monitoreo de transporte empresarial que permite el seguimiento en tiempo real de vehículos, la gestión administrativa de rutas, conductores y pasajeros, así como la notificación inteligente de paradas con sistema de penalizaciones.
 
-Construido con Next.js 15, React 18 y Firebase, el sistema ofrece tres interfaces especializadas:
+Construido con Next.js 15 y React 18, el sistema ofrece tres interfaces especializadas:
 - **Dashboard Administrativo:** Panel de control completo con monitoreo GPS, gestión de usuarios, rutas, vehículos y reportes
 - **Vista Móvil de Usuario:** Aplicación para pasajeros con notificaciones de parada, tracking y encuestas
 - **Vista del Conductor:** Panel en tiempo real para operadores de buses con TTS integrado
@@ -85,7 +85,6 @@ Antes de comenzar, asegúrate de tener instalado:
 
 - **Node.js 20+** (recomendado: 20.11.0 o superior)
 - **npm** o **pnpm**
-- **Firebase CLI:** `npm install -g firebase-tools`
 - **Genkit CLI:** `npm install -g genkit-cli` (opcional, para desarrollo de IA)
 - **Git**
 
@@ -96,9 +95,6 @@ Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
 ```bash
 # Google AI API Key (para Text-to-Speech)
 GOOGLE_API_KEY=tu_api_key_aqui
-
-# Firebase Configuration (opcional si usas emulators)
-FIREBASE_PROJECT_ID=studio-5170547963-be9ad
 ```
 
 ### Instalación
@@ -135,10 +131,9 @@ npm start                # Iniciar servidor de producción
 npm run typecheck        # Verificar tipos TypeScript
 npm run lint             # Ejecutar ESLint
 
-# Firebase
-firebase deploy --only hosting    # Deploy a Firebase Hosting
-firebase deploy --only functions  # Deploy de Cloud Functions
-firebase emulators:start          # Emuladores locales
+# Deployment
+npm run build     # Build para producción
+npm start         # Servidor de producción local
 ```
 
 ---
@@ -159,7 +154,6 @@ cesac/
 │   │   ├── ui/                # 35+ componentes shadcn/ui
 │   │   └── [...15+ componentes personalizados]
 │   ├── lib/
-│   │   ├── firebase/          # Configuración Firebase
 │   │   ├── audio.ts           # Sistema de sonidos
 │   │   ├── data.ts            # Datos iniciales
 │   │   └── utils.ts           # Utilidades
@@ -167,7 +161,6 @@ cesac/
 ├── ai/
 │   ├── genkit.ts              # Configuración de Google Genkit
 │   └── flows/                 # Flujos de IA (TTS)
-├── functions/                 # Firebase Cloud Functions
 ├── docs/                      # Esta documentación
 └── public/                    # Recursos estáticos
 ```
@@ -188,8 +181,6 @@ Para más detalles sobre la estructura, ver [arquitectura.md](./arquitectura.md)
 | | lucide-react | 0.475.0 | Iconos |
 | **Formularios** | React Hook Form | 7.54.2 | Gestión de formularios |
 | | Zod | 3.24.2 | Validación de esquemas |
-| **Backend** | Firebase | 11.9.1 | Hosting, Functions, Database |
-| | Firebase Functions | 7.0.1 | Serverless backend |
 | **IA/TTS** | Google Genkit | 1.13.0 | Framework de IA |
 | | Gemini 2.5 Flash TTS | - | Text-to-Speech |
 | **Mapas** | Leaflet | 1.9.4 | Mapas interactivos |
@@ -243,12 +234,6 @@ graph TB
         Storage[localStorage<br/>Persistencia]
     end
 
-    subgraph "Backend (Firebase)"
-        Hosting[Firebase Hosting<br/>Next.js SSR]
-        Functions[Cloud Functions<br/>Serverless]
-        DB[(Firestore<br/>Database)]
-    end
-
     subgraph "IA"
         Genkit[Google Genkit<br/>AI Framework]
         Gemini[Gemini 2.5 Flash<br/>TTS]
@@ -258,9 +243,6 @@ graph TB
     Comp --> Maps
     UI --> Context
     Context --> Storage
-    UI --> Hosting
-    Hosting --> Functions
-    Functions --> DB
     UI -.TTS.-> Genkit
     Genkit --> Gemini
 ```
@@ -324,13 +306,11 @@ Para reportar problemas o sugerencias, contacta al equipo de desarrollo.
 - [React 18 Documentation](https://react.dev)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [shadcn/ui Components](https://ui.shadcn.com)
-- [Firebase Documentation](https://firebase.google.com/docs)
 - [Google Genkit Documentation](https://firebase.google.com/docs/genkit)
 - [Leaflet Documentation](https://leafletjs.com)
 
 ### Herramientas de Desarrollo
 - [React DevTools](https://chrome.google.com/webstore/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi)
-- [Firebase Emulator Suite](https://firebase.google.com/docs/emulator-suite)
 - [Genkit Developer UI](http://localhost:4000) (durante desarrollo)
 
 ---

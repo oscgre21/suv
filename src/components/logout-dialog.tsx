@@ -10,8 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
-import { getAuth, signOut } from "firebase/auth";
-import { app } from "@/lib/firebase/config";
 import { useRouter } from "next/navigation";
 
 interface LogoutDialogProps {
@@ -21,7 +19,6 @@ interface LogoutDialogProps {
 
 export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
   const [countdown, setCountdown] = useState(3);
-  const auth = getAuth(app);
   const router = useRouter();
 
   useEffect(() => {
@@ -31,13 +28,10 @@ export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            signOut(auth).then(() => {
-              router.push('/');
-            }).catch((error) => {
-              console.error("Logout error:", error);
-              // Force redirect even if signout fails
-              router.push('/');
-            });
+            // Clear any session data from localStorage
+            localStorage.clear();
+            // Redirect to login
+            router.push('/');
             return 0;
           }
           return prev - 1;
@@ -46,7 +40,7 @@ export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
 
       return () => clearInterval(timer);
     }
-  }, [open, auth, router]);
+  }, [open, router]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

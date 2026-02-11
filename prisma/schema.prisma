@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== USUARIOS ====================
+model Usuario {
+  id              String            @id @default(cuid())
+  nombre          String
+  cedula          String            @unique
+  email           String            @unique
+  telefono        String?
+  direccion       String?
+  rutaAsignada    String?
+  ruta            Ruta?             @relation(fields: [rutaAsignada], references: [id])
+  estado          String            @default("Activo") // Activo | Inactivo
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  solicitudes     SolicitudParada[]
+  historialViajes HistorialViaje[]
+
+  @@map("usuarios")
+}
+
+// ==================== CONDUCTORES ====================
+model Conductor {
+  id              String           @id @default(cuid())
+  nombre          String
+  cedula          String           @unique
+  licencia        String           @unique
+  telefono        String
+  email           String?
+  turno           String // Matutino | Vespertino | Nocturno
+  estado          String           @default("Activo") // Activo | Vacaciones | Inactivo
+  fechaIngreso    DateTime         @default(now())
+  vehiculoId      String?          @unique
+  vehiculo        Vehiculo?        @relation(fields: [vehiculoId], references: [id])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  horarios        Horario[]
+  historialViajes HistorialViaje[]
+
+  @@map("conductores")
+}
+
+// ==================== VEHICULOS ====================
+model Vehiculo {
+  id              String           @id @default(cuid())
+  ficha           String           @unique
+  modelo          String
+  placa           String           @unique
+  capacidad       Int
+  estado          String           @default("Operativo") // Operativo | EnTaller | FueraDeServicio
+  rutaAsignada    String?
+  ruta            Ruta?            @relation(fields: [rutaAsignada], references: [id])
+  conductor       Conductor?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  historialViajes HistorialViaje[]
+
+  @@map("vehiculos")
+}
+
+// ==================== RUTAS ====================
+model Ruta {
+  id              String            @id @default(cuid())
+  nombre          String            @unique
+  descripcion     String?
+  color           String            @default("#3b82f6") // Para visualización en mapa
+  activa          Boolean           @default(true)
+  esEspecial      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  paradas         Parada[]
+  horarios        Horario[]
+  vehiculos       Vehiculo[]
+  usuarios        Usuario[]
+  solicitudes     SolicitudParada[]
+  historialViajes HistorialViaje[]
+
+  @@map("rutas")
+}
+
+// ==================== PARADAS ====================
+model Parada {
+  id          String            @id @default(cuid())
+  nombre      String
+  direccion   String
+  latitud     Float
+  longitud    Float
+  orden       Int // Orden en la ruta (1, 2, 3...)
+  rutaId      String
+  ruta        Ruta              @relation(fields: [rutaId], references: [id], onDelete: Cascade)
+  activa      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  solicitudes SolicitudParada[]
+
+  @@unique([rutaId, orden])
+  @@index([rutaId])
+  @@map("paradas")
+}
+
+// ==================== HORARIOS ====================
+model Horario {
+  id          String    @id @default(cuid())
+  rutaId      String
+  ruta        Ruta      @relation(fields: [rutaId], references: [id], onDelete: Cascade)
+  conductorId String
+  conductor   Conductor @relation(fields: [conductorId], references: [id])
+  horaInicio  String // "06:00"
+  horaFin     String // "07:30"
+  diasSemana  String[] // ["Lunes", "Martes", ...]
+  activo      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([rutaId])
+  @@index([conductorId])
+  @@map("horarios")
+}
+
+// ==================== SOLICITUDES DE PARADAS ====================
+model SolicitudParada {
+  id            String   @id @default(cuid())
+  usuarioId     String
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id])
+  paradaId      String
+  parada        Parada   @relation(fields: [paradaId], references: [id])
+  rutaId        String
+  ruta          Ruta     @relation(fields: [rutaId], references: [id])
+  horaSolicitud DateTime @default(now())
+  estado        String   @default("Pendiente") // Pendiente | Confirmado | NoRecogido | Cancelado
+  notificado    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([usuarioId])
+  @@index([paradaId])
+  @@index([rutaId])
+  @@map("solicitudes_paradas")
+}
+
+// ==================== HISTORIAL DE VIAJES ====================
+model HistorialViaje {
+  id                 String    @id @default(cuid())
+  rutaId             String
+  ruta               Ruta      @relation(fields: [rutaId], references: [id])
+  vehiculoId         String
+  vehiculo           Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  conductorId        String
+  conductor          Conductor @relation(fields: [conductorId], references: [id])
+  usuarioId          String?
+  usuario            Usuario?  @relation(fields: [usuarioId], references: [id])
+  fechaInicio        DateTime
+  fechaFin           DateTime?
+  duracionMinutos    Int?
+  pasajeros          Int       @default(0)
+  paradasConfirmadas Int       @default(0)
+  estado             String // Completado | EnCurso | Cancelado
+  calificacion       Int? // 1-5 estrellas
+  comentarios        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([rutaId])
+  @@index([vehiculoId])
+  @@index([conductorId])
+  @@index([usuarioId])
+  @@map("historial_viajes")
+}
+
+// ==================== ESTATUS VEHICULO (Catalogo) ====================
+model EstatusVehiculo {
+  id          String   @id @default(cuid())
+  nombre      String   @unique
+  color       String // Color para UI
+  descripcion String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("estatus_vehiculos")
+}
