@@ -20,7 +20,9 @@ export async function GET() {
     const vehiculos = await prisma.vehiculo.findMany({
       where: {
         rutaAsignada: session.rutaAsignada,
-        estado: 'Operativo',
+        estado: {
+          in: ['Operativo', 'En Ruta', 'Retrasado', 'Dañado', '911'],
+        },
       },
       select: {
         id: true,

@@ -206,13 +206,24 @@ export default function VistaBusPage() {
         };
     }, [isRouteActive]);
 
-    const handleStartRoute = () => {
+    const handleStartRoute = async () => {
         setIsRouteActive(true);
         setElapsedTime(0);
         setTripDuration(null);
+
+        // Actualizar estado del vehículo a "En Ruta"
+        if (conductor?.vehiculo?.id) {
+            try {
+                await execute(`/api/vehiculos/${conductor.vehiculo.id}/estado`, 'PATCH', {
+                    estado: 'En Ruta'
+                });
+            } catch (error) {
+                console.error('Error actualizando estado del vehículo:', error);
+            }
+        }
     };
 
-    const handleFinishRoute = () => {
+    const handleFinishRoute = async () => {
         setIsRouteActive(false);
         setTripDuration(formatTime(elapsedTime));
 
@@ -223,6 +234,17 @@ export default function VistaBusPage() {
 
         setPassengersOnBoard(initialPassengers);
         setCurrentStopIndex(0);
+
+        // Actualizar estado del vehículo a "Operativo"
+        if (conductor?.vehiculo?.id) {
+            try {
+                await execute(`/api/vehiculos/${conductor.vehiculo.id}/estado`, 'PATCH', {
+                    estado: 'Operativo'
+                });
+            } catch (error) {
+                console.error('Error actualizando estado del vehículo:', error);
+            }
+        }
     };
     
     const handleTTS = async (text: string) => {
@@ -282,9 +304,24 @@ export default function VistaBusPage() {
             .catch(err => console.error('Error refreshing solicitudes:', err));
     };
 
-    const handleSetStatus = (newStatus: string) => {
+    const handleSetStatus = async (newStatus: string) => {
         setStatus(newStatus);
-        // TODO: Actualizar estado del vehículo en la base de datos
+
+        // Actualizar estado del vehículo en la base de datos
+        if (conductor?.vehiculo?.id) {
+            try {
+                await execute(`/api/vehiculos/${conductor.vehiculo.id}/estado`, 'PATCH', {
+                    estado: newStatus
+                });
+            } catch (error) {
+                console.error('Error actualizando estado del vehículo:', error);
+                toast({
+                    title: 'Error',
+                    description: 'No se pudo actualizar el estado del vehículo',
+                    variant: 'destructive',
+                });
+            }
+        }
     };
 
     useEffect(() => {
