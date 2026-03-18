@@ -21,6 +21,7 @@ import { Loader2 } from 'lucide-react';
 function UsuarioPageContent() {
     const {
         buses,
+        paradas,
         selectedBusId,
         setSelectedBusId,
         selectedBus,
@@ -171,6 +172,17 @@ function UsuarioPageContent() {
             </div>
             <div className="flex-grow relative">
                  <AnimatedMap
+                    vehiculos={buses.filter(b => b.latitud && b.longitud).map(b => ({
+                        id: b.id,
+                        ficha: b.ficha,
+                        latitud: b.latitud!,
+                        longitud: b.longitud!,
+                        velocidad: b.velocidad,
+                        estado: b.estado,
+                        ruta: null,
+                        ultimaActualizacion: null,
+                    }))}
+                    paradas={paradas}
                     isNotified={notified}
                     countdownSeconds={countdownSeconds}
                     initialSeconds={(selectedBus.tiempoEstimado || 5) * 60}

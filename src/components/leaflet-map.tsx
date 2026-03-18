@@ -4,7 +4,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Bus } from 'lucide-react';
+import { Bus, MapPin } from 'lucide-react';
 import ReactDOMServer from 'react-dom/server';
 
 interface VehiculoGPS {
@@ -18,8 +18,17 @@ interface VehiculoGPS {
   ultimaActualizacion: string | null;
 }
 
+interface ParadaMap {
+  id: string;
+  nombre: string;
+  latitud: number;
+  longitud: number;
+  orden: number;
+}
+
 interface LeafletMapProps {
   vehiculos?: VehiculoGPS[];
+  paradas?: ParadaMap[];
   isNotified?: boolean;
   countdownSeconds?: number;
   initialSeconds?: number;
@@ -40,22 +49,39 @@ const busIcon = new L.DivIcon({
   popupAnchor: [0, -16],
 });
 
+const createParadaIcon = (orden: number) => new L.DivIcon({
+  html: ReactDOMServer.renderToString(
+    <div className="relative flex items-center justify-center w-7 h-7">
+      <div className="relative flex items-center justify-center w-6 h-6 bg-white border-2 border-blue-600 rounded-full shadow-md">
+        <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#2563eb' }}>{orden}</span>
+      </div>
+    </div>
+  ),
+  className: '',
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+  popupAnchor: [0, -14],
+});
+
 const getEstadoTexto = (estado: string, velocidad: number) => {
   if (velocidad > 0) return 'En Ruta';
   if (estado === 'Operativo') return 'Detenido';
   return estado;
 };
 
-export function LeafletMap({ vehiculos = [] }: LeafletMapProps) {
+export function LeafletMap({ vehiculos = [], paradas = [] }: LeafletMapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
     const markersRef = useRef<Map<string, L.Marker>>(new Map());
+    const paradaMarkersRef = useRef<L.Marker[]>([]);
+    const polylineRef = useRef<L.Polyline | null>(null);
+    const hasFittedBoundsRef = useRef(false);
 
+    // Inicializar mapa
     useEffect(() => {
-        // Initialize map only if the container exists and the map isn't already initialized.
         if (mapContainerRef.current && !mapInstanceRef.current) {
             const map = L.map(mapContainerRef.current, {
-                center: [18.4861, -69.9312], // Santo Domingo
+                center: [18.4861, -69.9312],
                 zoom: 13,
                 scrollWheelZoom: false,
             });
@@ -67,8 +93,75 @@ export function LeafletMap({ vehiculos = [] }: LeafletMapProps) {
             mapInstanceRef.current = map;
         }
 
-        // Update markers with animation
-        if (mapInstanceRef.current && vehiculos && vehiculos.length > 0) {
+        return () => {
+            if (mapInstanceRef.current) {
+                markersRef.current.forEach(marker => {
+                    mapInstanceRef.current?.removeLayer(marker);
+                });
+                markersRef.current.clear();
+                mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
+                hasFittedBoundsRef.current = false;
+            }
+        };
+    }, []);
+
+    // Dibujar paradas y polyline
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!map || paradas.length === 0) return;
+
+        // Limpiar paradas anteriores
+        paradaMarkersRef.current.forEach(m => map.removeLayer(m));
+        paradaMarkersRef.current = [];
+        if (polylineRef.current) {
+            map.removeLayer(polylineRef.current);
+            polylineRef.current = null;
+        }
+
+        // Ordenar paradas por orden
+        const paradasOrdenadas = [...paradas].sort((a, b) => a.orden - b.orden);
+
+        // Dibujar polyline conectando las paradas
+        const latlngs: L.LatLngExpression[] = paradasOrdenadas.map(p => [p.latitud, p.longitud]);
+        polylineRef.current = L.polyline(latlngs, {
+            color: '#2563eb',
+            weight: 3,
+            opacity: 0.6,
+            dashArray: '8, 8',
+        }).addTo(map);
+
+        // Dibujar marcadores de paradas
+        paradasOrdenadas.forEach(parada => {
+            const marker = L.marker([parada.latitud, parada.longitud], {
+                icon: createParadaIcon(parada.orden),
+                zIndexOffset: -100,
+            }).addTo(map);
+
+            marker.bindPopup(`
+                <div style="text-align:center;">
+                    <strong>${parada.nombre}</strong><br/>
+                    <span style="color:#666;font-size:12px;">Parada #${parada.orden}</span>
+                </div>
+            `);
+
+            paradaMarkersRef.current.push(marker);
+        });
+
+        // Ajustar zoom para mostrar todas las paradas (solo la primera vez)
+        if (!hasFittedBoundsRef.current && latlngs.length > 0) {
+            const bounds = L.latLngBounds(latlngs);
+            map.fitBounds(bounds, { padding: [30, 30] });
+            hasFittedBoundsRef.current = true;
+        }
+    }, [paradas]);
+
+    // Actualizar marcadores de vehículos
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!map) return;
+
+        if (vehiculos.length > 0) {
             const currentMarkers = markersRef.current;
             const updatedVehicleIds = new Set<string>();
 
@@ -78,20 +171,16 @@ export function LeafletMap({ vehiculos = [] }: LeafletMapProps) {
                     const newLatLng: L.LatLngExpression = [vehiculo.latitud, vehiculo.longitud];
 
                     if (currentMarkers.has(vehiculo.id)) {
-                        // Update existing marker with smooth animation
                         const existingMarker = currentMarkers.get(vehiculo.id)!;
                         const currentLatLng = existingMarker.getLatLng();
 
-                        // Only animate if position changed significantly (> 0.0001 degrees ~11 meters)
                         const latDiff = Math.abs(currentLatLng.lat - vehiculo.latitud);
                         const lngDiff = Math.abs(currentLatLng.lng - vehiculo.longitud);
 
                         if (latDiff > 0.0001 || lngDiff > 0.0001) {
-                            // Animate marker movement
                             animateMarker(existingMarker, currentLatLng, newLatLng);
                         }
 
-                        // Update popup content
                         const velocidad = vehiculo.velocidad ?? 0;
                         const estado = getEstadoTexto(vehiculo.estado, velocidad);
 
@@ -104,9 +193,8 @@ export function LeafletMap({ vehiculos = [] }: LeafletMapProps) {
                             </div>
                         `);
                     } else {
-                        // Create new marker
                         const marker = L.marker(newLatLng, { icon: busIcon })
-                            .addTo(mapInstanceRef.current!);
+                            .addTo(map);
 
                         const velocidad = vehiculo.velocidad ?? 0;
                         const estado = getEstadoTexto(vehiculo.estado, velocidad);
@@ -125,32 +213,19 @@ export function LeafletMap({ vehiculos = [] }: LeafletMapProps) {
                 }
             });
 
-            // Remove markers for vehicles that no longer exist
+            // Remover marcadores de vehículos que ya no existen
             currentMarkers.forEach((marker, id) => {
                 if (!updatedVehicleIds.has(id)) {
-                    mapInstanceRef.current?.removeLayer(marker);
+                    map.removeLayer(marker);
                     currentMarkers.delete(id);
                 }
             });
         }
+    }, [vehiculos]);
 
-        // Cleanup function to run when component is unmounted
-        return () => {
-            if (mapInstanceRef.current) {
-                markersRef.current.forEach(marker => {
-                    mapInstanceRef.current?.removeLayer(marker);
-                });
-                markersRef.current.clear();
-                mapInstanceRef.current.remove();
-                mapInstanceRef.current = null;
-            }
-        };
-    }, [vehiculos]); // Update when vehiculos change
-
-    // Smooth marker animation helper
     const animateMarker = (marker: L.Marker, startLatLng: L.LatLng, endLatLng: L.LatLngExpression) => {
-        const duration = 1000; // 1 second animation
-        const frameRate = 60; // 60 FPS
+        const duration = 1000;
+        const frameRate = 60;
         const frames = duration / (1000 / frameRate);
         let frame = 0;
 
