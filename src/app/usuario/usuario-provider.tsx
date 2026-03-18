@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { playErrorSound, playSuccessSound, playLoopingAlertSound } from '@/lib/audio';
+import { playErrorSound, playSuccessSound, playLoopingAlertSound, stopLoopingAlertSound } from '@/lib/audio';
 import { useApi } from '@/hooks/use-api';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -19,6 +19,7 @@ export interface Bus {
     longitud: number | null;
     proximaParada: string | null;
     tiempoEstimado: number | null;
+    pasajerosABordo: number | null;
 }
 
 export interface Parada {
@@ -234,6 +235,50 @@ function UsuarioProviderContent({ children }: { children: React.ReactNode }) {
             }
         };
     }, [usuario, selectedBusId, toast, fetchData]);
+
+    // Escuchar confirmaciones de solicitudes via SSE
+    useEffect(() => {
+        if (!usuario || !activeSolicitudId) return;
+
+        let eventSource: EventSource | null = null;
+
+        try {
+            eventSource = new EventSource('/api/usuarios/me/solicitudes/stream');
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.solicitudId === activeSolicitudId) {
+                        setNotified(false);
+                        setActiveSolicitudId(null);
+                        localStorage.removeItem('isStopNotified');
+                        setCountdownSeconds(0);
+                        setShowSurvey(true);
+                        stopLoopingAlertSound();
+                        toast({
+                            title: '🚌 Bus llegó a tu parada',
+                            description: 'Tu solicitud ha sido confirmada por el conductor.',
+                        });
+                    }
+                } catch (error) {
+                    console.error('[SSE Solicitudes] Error parseando evento:', error);
+                }
+            };
+
+            eventSource.onerror = () => {
+                console.error('[SSE Solicitudes] Error en conexión');
+                eventSource?.close();
+            };
+        } catch (error) {
+            console.error('[SSE Solicitudes] Error creando EventSource:', error);
+        }
+
+        return () => {
+            if (eventSource) {
+                eventSource.close();
+            }
+        };
+    }, [usuario, activeSolicitudId, toast]);
 
     useEffect(() => {
         if (usuario) {

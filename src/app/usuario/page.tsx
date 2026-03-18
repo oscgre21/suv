@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Bus, Clock, AlertCircle, MapPin, Ban } from 'lucide-react';
+import { Bus, Clock, AlertCircle, MapPin, Ban, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatedMap } from '@/components/animated-map';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -239,6 +239,13 @@ function UsuarioPageContent() {
                                  <div className='text-sm'>
                                     <span className="text-muted-foreground">Próxima parada: </span>
                                     <span className="font-bold">{selectedBus.proximaParada || 'Calculando...'}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Users className="h-5 w-5 text-primary"/>
+                                <div className='text-sm'>
+                                    <span className="text-muted-foreground">A bordo: </span>
+                                    <span className="font-bold">{selectedBus.pasajerosABordo ?? 0} pasajeros</span>
                                 </div>
                             </div>
                         </div>

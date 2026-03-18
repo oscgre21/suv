@@ -329,11 +329,16 @@ export default function VistaBusPage() {
         const newPassengersCount = passengersOnBoard + currentStopRequests;
         setPassengersOnBoard(newPassengersCount);
 
-        // Actualizar pasajeros en la base de datos
+        // Actualizar pasajeros en la base de datos y confirmar solicitudes
         if (conductor?.vehiculo?.id) {
             try {
                 await execute(`/api/vehiculos/${conductor.vehiculo.id}/pasajeros`, 'PATCH', {
                     pasajerosABordo: newPassengersCount
+                });
+
+                // Confirmar solicitudes pendientes en esta parada
+                await execute('/api/conductores/me/solicitudes/confirmar', 'POST', {
+                    paradaId: paradas[currentStopIndex].id,
                 });
             } catch (error) {
                 console.error('Error actualizando pasajeros:', error);
