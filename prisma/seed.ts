@@ -443,7 +443,7 @@ async function main() {
       password: defaultPassword,
       telefono: '809-555-1002',
       direccion: 'Villa Mella, Santo Domingo Norte',
-      rutaAsignada: rutaDuarte.id,
+      rutaAsignada: rutaCharles.id,
       estado: 'Activo',
     },
   });

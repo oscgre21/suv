@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
+import { eventBus } from '@/lib/event-bus';
 
 const PENALTY_DURATION_MINUTES = 10;
 
@@ -71,6 +72,13 @@ export async function POST(request: Request) {
         estado: 'Pendiente',
         notificado: false,
       },
+    });
+
+    // Notificar al conductor en tiempo real
+    eventBus.emit('solicitud-update', {
+      rutaId: session.rutaAsignada,
+      paradaId,
+      tipo: 'nueva',
     });
 
     return NextResponse.json({

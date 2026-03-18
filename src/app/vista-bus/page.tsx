@@ -191,15 +191,34 @@ export default function VistaBusPage() {
     useEffect(() => {
         loadConductorData();
 
-        // Auto-refresh de solicitudes cada 30 segundos
+        // Polling de solicitudes como fallback (cada 60 segundos)
         const interval = setInterval(() => {
             execute('/api/conductores/me/solicitudes', 'GET')
                 .then(data => setSolicitudesPorParada(data))
                 .catch(err => console.error('Error refreshing solicitudes:', err));
-        }, 30000);
+        }, 60000);
 
         return () => clearInterval(interval);
     }, [loadConductorData, execute]);
+
+    // SSE para actualizaciones en tiempo real de solicitudes
+    useEffect(() => {
+        const eventSource = new EventSource('/api/conductores/me/solicitudes/stream');
+
+        eventSource.onmessage = () => {
+            // Al recibir una actualización, refrescar las solicitudes
+            execute('/api/conductores/me/solicitudes', 'GET')
+                .then(data => setSolicitudesPorParada(data))
+                .catch(err => console.error('Error refreshing solicitudes via SSE:', err));
+        };
+
+        eventSource.onerror = () => {
+            console.error('[SSE] Error en conexión de solicitudes');
+            eventSource.close();
+        };
+
+        return () => eventSource.close();
+    }, [execute]);
 
     useEffect(() => {
         if (isRouteActive) {

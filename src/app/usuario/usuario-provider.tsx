@@ -256,8 +256,11 @@ function UsuarioProviderContent({ children }: { children: React.ReactNode }) {
     const handleNotify = useCallback(async () => {
         if (notified || !selectedBus || !usuario) return;
 
-        // Usar primera parada como parada actual (simplificado)
-        const paradaId = paradas[0]?.id;
+        // Determinar la parada según la próxima parada del bus seleccionado
+        const paradaMatch = selectedBus.proximaParada
+            ? paradas.find(p => p.nombre === selectedBus.proximaParada)
+            : null;
+        const paradaId = paradaMatch?.id || paradas[0]?.id;
 
         if (!paradaId) {
             toast({
