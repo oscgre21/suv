@@ -79,6 +79,8 @@ function UsuarioProviderContent({ children }: { children: React.ReactNode }) {
     const [showArrivalAlert, setShowArrivalAlert] = useState(false);
     const [showSurvey, setShowSurvey] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [solicitudRestored, setSolicitudRestored] = useState(false);
+    const [activeSolicitudId, setActiveSolicitudId] = useState<string | null>(null);
 
     const { toast } = useToast();
     const selectedBus = buses.find(bus => bus.id === selectedBusId) || null;
@@ -111,6 +113,49 @@ function UsuarioProviderContent({ children }: { children: React.ReactNode }) {
             setIsLoading(false);
         }
     }, [usuario, execute, toast, selectedBusId]);
+
+    // Restaurar solicitud pendiente solo una vez al montar
+    useEffect(() => {
+        if (!usuario || solicitudRestored || notified) return;
+
+        const restoreSolicitud = async () => {
+            try {
+                const solicitudesData = await execute('/api/usuarios/me/solicitudes', 'GET');
+                console.log('[RESTORE] Solicitudes recibidas:', solicitudesData);
+                const solicitudPendiente = solicitudesData.find(
+                    (s: any) => s.estado === 'Pendiente'
+                );
+                console.log('[RESTORE] Solicitud pendiente:', solicitudPendiente);
+
+                if (solicitudPendiente) {
+                    const horaCreacion = new Date(solicitudPendiente.horaSolicitud).getTime();
+                    const hace2Horas = Date.now() - 2 * 60 * 60 * 1000;
+                    const elapsed = Math.floor((Date.now() - horaCreacion) / 1000);
+                    const totalSeconds = PENALTY_DURATION_MINUTES * 60;
+
+                    if (horaCreacion > hace2Horas) {
+                        if (elapsed < totalSeconds) {
+                            // Countdown aún activo: restaurar con tiempo restante
+                            const remaining = totalSeconds - elapsed;
+                            setActiveSolicitudId(solicitudPendiente.id);
+                            setNotified(true);
+                            setCountdownSeconds(remaining);
+                        } else {
+                            // Countdown expirado pero solicitud sigue pendiente en DB:
+                            // Mostrar survey y limpiar estado
+                            setShowSurvey(true);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('[RESTORE] Error restaurando solicitud:', error);
+            } finally {
+                setSolicitudRestored(true);
+            }
+        };
+
+        restoreSolicitud();
+    }, [usuario, solicitudRestored, notified, execute]);
 
     // Conectar a SSE para actualizaciones en tiempo real
     useEffect(() => {
@@ -231,6 +276,7 @@ function UsuarioProviderContent({ children }: { children: React.ReactNode }) {
 
             if (response.success) {
                 playSuccessSound();
+                setActiveSolicitudId(response.solicitud.id);
                 setNotified(true);
                 localStorage.setItem('isStopNotified', 'true');
                 setCountdownSeconds(response.solicitud.penalizacionMinutos * 60);
@@ -265,7 +311,17 @@ function UsuarioProviderContent({ children }: { children: React.ReactNode }) {
         }
     }, [searchParams, handleNotify, buses]);
 
-    const handleCancellation = () => {
+    const handleCancellation = async () => {
+        // Cancelar solicitud en el backend
+        if (activeSolicitudId) {
+            try {
+                await execute(`/api/solicitudes/${activeSolicitudId}`, 'DELETE');
+            } catch (error) {
+                console.error('Error cancelando solicitud en backend:', error);
+            }
+            setActiveSolicitudId(null);
+        }
+
         setNotified(false);
         localStorage.removeItem('isStopNotified');
         const endTime = Date.now() + PENALTY_DURATION_MINUTES * 60 * 1000;

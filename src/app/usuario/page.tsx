@@ -63,6 +63,7 @@ function UsuarioPageContent() {
     const getStatusVariant = (status: string) => {
         switch (status.toLowerCase()) {
             case 'en ruta':
+            case 'operativo':
                 return 'outline';
             case 'retrasado':
             case 'dañado':
@@ -75,6 +76,7 @@ function UsuarioPageContent() {
     const getStatusColor = (status: string) => {
          switch (status.toLowerCase()) {
             case 'en ruta':
+            case 'operativo':
                 return 'text-green-600';
             case 'retrasado':
             case 'dañado':
@@ -87,6 +89,7 @@ function UsuarioPageContent() {
      const getStatusPingColor = (status: string) => {
          switch (status.toLowerCase()) {
             case 'en ruta':
+            case 'operativo':
                 return 'bg-green-400';
             case 'retrasado':
             case 'dañado':
@@ -99,6 +102,7 @@ function UsuarioPageContent() {
     const getStatusDotColor = (status: string) => {
          switch (status.toLowerCase()) {
             case 'en ruta':
+            case 'operativo':
                 return 'bg-green-500';
             case 'retrasado':
                 return 'bg-red-500';
@@ -228,7 +232,7 @@ function UsuarioPageContent() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            {selectedBus.estado === 'Operativo' ? (
+                            {selectedBus.estado === 'Operativo' || selectedBus.estado === 'En Ruta' ? (
                                 <Button 
                                     size="lg" 
                                     className="w-full h-12 text-base font-bold shadow-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
@@ -268,7 +272,7 @@ function UsuarioPageContent() {
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>⚠️ Advertencia de Ruta</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                El bus seleccionado tiene un estado de "{selectedBus.status}". La espera estimada podría extenderse más de lo normal.
+                                                El bus seleccionado tiene un estado de "{selectedBus.estado}". La espera estimada podría extenderse más de lo normal.
                                                 ¿Desea notificar su parada de todos modos?
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>

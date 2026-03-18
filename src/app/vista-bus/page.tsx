@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Siren, Wifi, WifiOff, Play, Square, Timer, Mic, LayoutDashboard, Loader2 } from 'lucide-react';
+import { Siren, Wifi, WifiOff, Play, Square, Timer, Mic, LayoutDashboard, Loader2, LogOut } from 'lucide-react';
 import { playSuccessSound } from '@/lib/audio';
 import { useApi } from '@/hooks/use-api';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ import { WeatherWidget } from '@/components/weather-widget';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { LogoutDialog } from '@/components/logout-dialog';
 
 const DigitalClock = () => {
     const [time, setTime] = useState<Date | null>(null);
@@ -141,6 +142,7 @@ export default function VistaBusPage() {
     const [tripDuration, setTripDuration] = useState<string | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+    const [showLogout, setShowLogout] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [audioCache, setAudioCache] = useState<Record<string, string>>({});
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -163,6 +165,16 @@ export default function VistaBusPage() {
             // Inicializar pasajeros a bordo desde la base de datos
             if (conductorData.vehiculo?.pasajerosABordo !== undefined) {
                 setPassengersOnBoard(conductorData.vehiculo.pasajerosABordo);
+            }
+
+            // Restaurar estado de ruta activa desde la DB
+            const vehiculoEstado = conductorData.vehiculo?.estado;
+            if (vehiculoEstado) {
+                setStatus(vehiculoEstado);
+                const estadosRutaActiva = ['En Ruta', 'Retrasado', 'Dañado', '911'];
+                if (estadosRutaActiva.includes(vehiculoEstado)) {
+                    setIsRouteActive(true);
+                }
             }
         } catch (error) {
             console.error('Error cargando datos del conductor:', error);
@@ -214,8 +226,8 @@ export default function VistaBusPage() {
         // Actualizar estado del vehículo a "En Ruta"
         if (conductor?.vehiculo?.id) {
             try {
-                // Inicializar pasajeros a bordo (40% de capacidad)
-                const initialPassengers = Math.floor((conductor.vehiculo.capacidad || 0) * 0.4);
+                // Iniciar con 0 pasajeros reales
+                const initialPassengers = 0;
 
                 await Promise.all([
                     execute(`/api/vehiculos/${conductor.vehiculo.id}/estado`, 'PATCH', {
@@ -413,6 +425,7 @@ export default function VistaBusPage() {
                     `}</style>
                     
                     {audioUrl && <audio ref={audioRef} src={audioUrl} autoPlay />}
+                    <LogoutDialog open={showLogout} onOpenChange={setShowLogout} />
 
                     <motion.header 
                         initial={{ opacity: 0, y: -50 }}
@@ -434,6 +447,9 @@ export default function VistaBusPage() {
                                 <Link href="/dashboard" title="Ir al Dashboard">
                                     <LayoutDashboard className="h-7 w-7" />
                                 </Link>
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-red-400 hover:bg-red-500/20 hover:text-red-300" onClick={() => setShowLogout(true)} title="Cerrar Sesión">
+                                <LogOut className="h-6 w-6" />
                             </Button>
                             <div className={cn("flex items-center gap-2 text-sm px-3 py-1 rounded-full", isOnline ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300")}>
                                 {isOnline ? <Wifi className="h-4 w-4"/> : <WifiOff className="h-4 w-4"/>}
