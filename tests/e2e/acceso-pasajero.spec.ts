@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { CREDS, loginApi } from './helpers';
+import { CREDS, loginApi, capturaPantalla } from './helpers';
 
 test.describe('Acceso de pasajero', () => {
   test('el pasajero NO puede entrar a /dashboard (lo redirige)', async ({ page }) => {
@@ -30,5 +30,26 @@ test.describe('Acceso de pasajero', () => {
     expect(res.ok()).toBeTruthy();
     const paradas = await res.json();
     expect(Array.isArray(paradas)).toBeTruthy();
+  });
+
+  // Recorrido visual de TODAS las pantallas del usuario final (consultar su ruta).
+  test('recorrido de pantallas del usuario', async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto('/');
+    await capturaPantalla(page, 'usuarios', 0, 'login', '/');
+    await loginApi(page.request, CREDS.pasajero);
+
+    const pantallas: Array<[string, string]> = [
+      ['inicio-mapa-ruta', '/usuario'],
+      ['horarios', '/usuario/horarios'],
+      ['historial', '/usuario/historial'],
+      ['perfil', '/usuario/perfil'],
+    ];
+
+    for (let i = 0; i < pantallas.length; i++) {
+      const [slug, ruta] = pantallas[i];
+      await capturaPantalla(page, 'usuarios', i + 1, slug, ruta);
+      expect(page.url()).toContain('/usuario');
+    }
   });
 });

@@ -114,6 +114,8 @@ interface Parada {
     nombre: string;
     direccion: string;
     orden: number;
+    latitud: number;
+    longitud: number;
 }
 
 const formatTime = (totalSeconds: number) => {
@@ -141,6 +143,12 @@ export default function VistaBusPage() {
     const [elapsedTime, setElapsedTime] = useState(0);
     const [tripDuration, setTripDuration] = useState<string | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Transmisión de GPS en vivo del bus a los usuarios de su ruta.
+    const geoWatchRef = useRef<number | null>(null);          // navigator.geolocation.watchPosition
+    const simIntervalRef = useRef<NodeJS.Timeout | null>(null); // simulador de movimiento (fallback)
+    const lastGpsSentRef = useRef<number>(0);                  // throttle (ms)
+    const simPosRef = useRef<{ lat: number; lng: number } | null>(null); // posición simulada actual
 
     const [showLogout, setShowLogout] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -237,6 +245,82 @@ export default function VistaBusPage() {
         };
     }, [isRouteActive]);
 
+    // --- Transmisión de GPS en vivo ---
+
+    // Envía la posición al backend (con throttle) para que se propague a los
+    // usuarios de la ruta vía evento `vehiculo-update`.
+    const sendGps = useCallback(async (lat: number, lng: number, paradaActualId?: string) => {
+        const vehiculoId = conductor?.vehiculo?.id;
+        if (!vehiculoId) return;
+        const now = Date.now();
+        // Throttle de 5s, salvo que se esté confirmando una parada (paradaActualId)
+        if (!paradaActualId && now - lastGpsSentRef.current < 5000) return;
+        lastGpsSentRef.current = now;
+        try {
+            await execute(`/api/vehiculos/${vehiculoId}/gps`, 'PATCH', {
+                latitud: lat,
+                longitud: lng,
+                velocidad: 30,
+                ...(paradaActualId ? { paradaActualId } : {}),
+            });
+        } catch (error) {
+            console.error('Error enviando GPS:', error);
+        }
+    }, [conductor?.vehiculo?.id, execute]);
+
+    // Inicia el seguimiento: GPS real si hay permiso, si no un simulador que
+    // mueve el bus hacia la siguiente parada (para escritorio/demo).
+    const startGpsTracking = useCallback(() => {
+        // 1) Intentar geolocalización real
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+            geoWatchRef.current = navigator.geolocation.watchPosition(
+                (pos) => sendGps(pos.coords.latitude, pos.coords.longitude),
+                () => {
+                    // Sin permiso/medición → arrancar simulador como fallback
+                    if (simIntervalRef.current == null) startSimulator();
+                },
+                { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+            );
+        } else {
+            startSimulator();
+        }
+
+        // Simulador: interpola la posición del bus hacia la parada objetivo.
+        function startSimulator() {
+            if (paradas.length === 0) return;
+            // Posición inicial = parada actual del recorrido
+            const inicio = paradas[currentStopIndex] ?? paradas[0];
+            simPosRef.current = { lat: inicio.latitud, lng: inicio.longitud };
+            simIntervalRef.current = setInterval(() => {
+                const objetivo = paradas[currentStopIndex] ?? paradas[0];
+                const cur = simPosRef.current;
+                if (!cur || !objetivo) return;
+                // Avanzar 20% de la distancia restante en cada tick
+                const nextLat = cur.lat + (objetivo.latitud - cur.lat) * 0.2;
+                const nextLng = cur.lng + (objetivo.longitud - cur.lng) * 0.2;
+                simPosRef.current = { lat: nextLat, lng: nextLng };
+                sendGps(nextLat, nextLng);
+            }, 5000);
+        }
+    }, [paradas, currentStopIndex, sendGps]);
+
+    const stopGpsTracking = useCallback(() => {
+        if (geoWatchRef.current != null && navigator.geolocation) {
+            navigator.geolocation.clearWatch(geoWatchRef.current);
+            geoWatchRef.current = null;
+        }
+        if (simIntervalRef.current != null) {
+            clearInterval(simIntervalRef.current);
+            simIntervalRef.current = null;
+        }
+        simPosRef.current = null;
+    }, []);
+
+    // Limpiar el seguimiento al desmontar el componente.
+    useEffect(() => {
+        return () => stopGpsTracking();
+    }, [stopGpsTracking]);
+
     const handleStartRoute = async () => {
         setIsRouteActive(true);
         setElapsedTime(0);
@@ -258,6 +342,9 @@ export default function VistaBusPage() {
                 ]);
 
                 setPassengersOnBoard(initialPassengers);
+
+                // Empezar a transmitir la posición del bus a los usuarios
+                startGpsTracking();
             } catch (error) {
                 console.error('Error actualizando estado del vehículo:', error);
             }
@@ -267,6 +354,9 @@ export default function VistaBusPage() {
     const handleFinishRoute = async () => {
         setIsRouteActive(false);
         setTripDuration(formatTime(elapsedTime));
+
+        // Detener la transmisión de GPS
+        stopGpsTracking();
 
         // Resetear pasajeros a bordo a 0
         setPassengersOnBoard(0);
@@ -340,6 +430,11 @@ export default function VistaBusPage() {
                 await execute('/api/conductores/me/solicitudes/confirmar', 'POST', {
                     paradaId: paradas[currentStopIndex].id,
                 });
+
+                // Persistir la parada actual + posición del bus (los usuarios la verán).
+                // Se ignora el throttle pasando paradaActualId.
+                const parada = paradas[currentStopIndex];
+                await sendGps(parada.latitud, parada.longitud, parada.id);
             } catch (error) {
                 console.error('Error actualizando pasajeros:', error);
             }

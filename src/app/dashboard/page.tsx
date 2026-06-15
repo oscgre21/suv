@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Bus, Users, Route, Clock, BarChartHorizontal, Loader2 } from 'lucide-react';
+import { Bus, Users, Route, Clock, BarChartHorizontal, Loader2, AlertTriangle, Siren } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import {
   ChartContainer,
@@ -31,6 +31,9 @@ interface DashboardStats {
   solicitudesPendientesChange: number;
   puntualidad: number;
   puntualidadChange: number;
+  busesEnAlerta: number;
+  alertasDesglose: { Retrasado: number; Dañado: number; '911': number };
+  hayEmergencia: boolean;
 }
 
 interface BusStatus {
@@ -72,15 +75,26 @@ const routeUsageChartConfig = {
 const getStatusColor = (estado: string) => {
   switch (estado) {
     case 'Operativo':
+    case 'En Ruta':
       return 'bg-green-500';
     case 'EnTaller':
       return 'bg-yellow-500';
+    case 'Retrasado':
+      return 'bg-amber-500';
+    case 'Dañado':
+      return 'bg-orange-500';
+    case '911':
+      return 'bg-red-600';
     case 'FueraDeServicio':
       return 'bg-red-500';
     default:
       return 'bg-gray-500';
   }
 };
+
+// ¿Es un estado que requiere atención del admin?
+const esAlerta = (estado: string) =>
+  estado === 'Retrasado' || estado === 'Dañado' || estado === '911';
 
 export default function MonitoreoPage() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -90,7 +104,10 @@ export default function MonitoreoPage() {
     solicitudesPendientes: 0,
     solicitudesPendientesChange: 0,
     puntualidad: 0,
-    puntualidadChange: 0
+    puntualidadChange: 0,
+    busesEnAlerta: 0,
+    alertasDesglose: { Retrasado: 0, Dañado: 0, '911': 0 },
+    hayEmergencia: false,
   });
   const [buses, setBuses] = useState<BusStatus[]>([]);
   const [routeUsage, setRouteUsage] = useState<RouteUsage[]>([]);
@@ -142,8 +159,15 @@ export default function MonitoreoPage() {
 
   const loadGPSData = async () => {
     try {
-      const gpsData = await execute('/api/dashboard/gps', 'GET');
+      // Refrescar GPS, estado de buses y métricas de alerta en tiempo casi real
+      const [gpsData, busesData, statsData] = await Promise.all([
+        execute('/api/dashboard/gps', 'GET'),
+        execute('/api/dashboard/buses', 'GET'),
+        execute('/api/dashboard/stats', 'GET'),
+      ]);
       setVehiculosGPS(gpsData);
+      setBuses(busesData);
+      setStats(statsData);
     } catch (error) {
       console.error('Error loading GPS data:', error);
     }
@@ -162,13 +186,40 @@ export default function MonitoreoPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-bold font-headline">Panel de control GPS</h1>
 
+      {/* Banner de alerta: visible cuando hay buses en incidencia */}
+      {!isLoading && stats.busesEnAlerta > 0 && (
+        <div
+          role="alert"
+          className={`flex items-center gap-3 rounded-lg border p-4 ${
+            stats.hayEmergencia
+              ? 'border-red-500 bg-red-500/10 text-red-700 dark:text-red-300'
+              : 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+          }`}
+        >
+          {stats.hayEmergencia ? (
+            <Siren className="h-5 w-5 animate-pulse shrink-0" />
+          ) : (
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+          )}
+          <div className="text-sm font-medium">
+            {stats.hayEmergencia && (
+              <span className="mr-1 font-bold">🚨 EMERGENCIA ACTIVA — </span>
+            )}
+            {stats.busesEnAlerta} bus{stats.busesEnAlerta > 1 ? 'es' : ''} requiere{stats.busesEnAlerta > 1 ? 'n' : ''} atención:
+            {stats.alertasDesglose['911'] > 0 && <span className="ml-1">{stats.alertasDesglose['911']} en 911</span>}
+            {stats.alertasDesglose.Dañado > 0 && <span className="ml-1">· {stats.alertasDesglose.Dañado} dañado(s)</span>}
+            {stats.alertasDesglose.Retrasado > 0 && <span className="ml-1">· {stats.alertasDesglose.Retrasado} retrasado(s)</span>}
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <AnimatedCard glowClassName="from-blue-500/20 to-blue-500/5" className="bg-gradient-to-br from-blue-500/20 to-blue-500/5">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Buses Activos</CardTitle>
@@ -178,6 +229,27 @@ export default function MonitoreoPage() {
                     <div className="text-2xl font-bold">{stats.busesActivos}</div>
                     <p className="text-xs text-muted-foreground">
                       {stats.busesActivosChange > 0 ? '+' : ''}{stats.busesActivosChange} que ayer
+                    </p>
+                </CardContent>
+            </AnimatedCard>
+            <AnimatedCard
+              glowClassName={stats.busesEnAlerta > 0 ? 'from-red-500/30 to-red-500/5' : 'from-slate-500/10 to-slate-500/5'}
+              className={stats.busesEnAlerta > 0
+                ? 'bg-gradient-to-br from-red-500/20 to-red-500/5'
+                : 'bg-gradient-to-br from-slate-500/10 to-slate-500/5'}
+            >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Buses en Alerta</CardTitle>
+                    <AlertTriangle className={`h-4 w-4 ${stats.busesEnAlerta > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                </CardHeader>
+                <CardContent>
+                    <div className={`text-2xl font-bold ${stats.busesEnAlerta > 0 ? 'text-red-600' : ''}`}>
+                      {stats.busesEnAlerta}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.busesEnAlerta === 0
+                        ? 'Sin incidencias'
+                        : `${stats.alertasDesglose['911']} en 911 · ${stats.alertasDesglose.Dañado} dañado(s) · ${stats.alertasDesglose.Retrasado} retrasado(s)`}
                     </p>
                 </CardContent>
             </AnimatedCard>
@@ -290,12 +362,17 @@ export default function MonitoreoPage() {
                           </TableHeader>
                           <TableBody>
                               {buses.map((bus) => (
-                              <TableRow key={bus.id}>
+                              <TableRow
+                                key={bus.id}
+                                className={esAlerta(bus.estado)
+                                  ? (bus.estado === '911' ? 'bg-red-500/10' : 'bg-amber-500/10')
+                                  : ''}
+                              >
                                   <TableCell className="font-medium">{bus.ficha}</TableCell>
                                   <TableCell>{bus.ruta?.nombre || 'Sin ruta'}</TableCell>
                                   <TableCell>
                                   <Badge variant="outline" className="flex items-center gap-2">
-                                      <span className={`h-2 w-2 rounded-full ${getStatusColor(bus.estado)}`}></span>
+                                      <span className={`h-2 w-2 rounded-full ${getStatusColor(bus.estado)} ${esAlerta(bus.estado) ? 'animate-pulse' : ''}`}></span>
                                       {bus.estado}
                                   </Badge>
                                   </TableCell>

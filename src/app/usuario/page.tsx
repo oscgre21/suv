@@ -234,6 +234,13 @@ function UsuarioPageContent() {
                                     <span className="font-bold">{selectedBus.tiempoEstimado || '?'} min</span>
                                 </div>
                             </div>
+                            <div className="flex items-center gap-3">
+                                <MapPin className="h-5 w-5 text-primary"/>
+                                 <div className='text-sm'>
+                                    <span className="text-muted-foreground">Parada actual: </span>
+                                    <span className="font-bold">{selectedBus.paradaActual || 'En tránsito'}</span>
+                                </div>
+                            </div>
                              <div className="flex items-center gap-3">
                                 <AlertCircle className="h-5 w-5 text-primary"/>
                                  <div className='text-sm'>

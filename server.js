@@ -56,7 +56,8 @@ app.prepare().then(() => {
       try {
         const vehiculos = await prisma.vehiculo.findMany({
           where: {
-            estado: 'Operativo',
+            // Incluir buses en alerta para que el dashboard los vea moverse
+            estado: { in: ['Operativo', 'En Ruta', 'Retrasado', 'Dañado', '911'] },
             latitud: { not: null },
             longitud: { not: null }
           },

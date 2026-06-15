@@ -7,9 +7,10 @@ export async function GET() {
     const guard = await requireAdmin();
     if (guard.response) return guard.response;
 
+    // Incluir también buses en estado de alerta para que aparezcan en el mapa.
     const vehiculos = await prisma.vehiculo.findMany({
       where: {
-        estado: 'Operativo',
+        estado: { in: ['Operativo', 'En Ruta', 'Retrasado', 'Dañado', '911'] },
         latitud: { not: null },
         longitud: { not: null },
       },

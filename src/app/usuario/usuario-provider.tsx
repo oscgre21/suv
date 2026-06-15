@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState, Suspense } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { playErrorSound, playSuccessSound, playLoopingAlertSound, stopLoopingAlertSound } from '@/lib/audio';
@@ -17,6 +17,7 @@ export interface Bus {
     velocidad: number;
     latitud: number | null;
     longitud: number | null;
+    paradaActual: string | null;
     proximaParada: string | null;
     tiempoEstimado: number | null;
     pasajerosABordo: number | null;
@@ -72,6 +73,8 @@ function UsuarioProviderContent({ children }: { children: React.ReactNode }) {
 
     const [buses, setBuses] = useState<Bus[]>([]);
     const [paradas, setParadas] = useState<Parada[]>([]);
+    // Último estado conocido por bus, para detectar cambios a estados de alerta
+    const estadosPreviosRef = useRef<Record<string, string>>({});
     const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
     const [notified, setNotified] = useState(false);
     const [countdownSeconds, setCountdownSeconds] = useState(0);
@@ -188,16 +191,34 @@ function UsuarioProviderContent({ children }: { children: React.ReactNode }) {
                         return [...prevBuses, updatedVehiculo];
                     });
 
-                    // Mostrar notificación solo si es el bus seleccionado
-                    if (selectedBusId === updatedVehiculo.id) {
-                        const estadoMessages: Record<string, string> = {
-                            'En Ruta': '🚌 El bus está en ruta',
-                            'Operativo': '✅ El bus está operativo',
-                            'Retrasado': '⏰ El bus está retrasado',
-                            'Dañado': '⚠️ El bus está dañado',
-                            '911': '🚨 Emergencia en el bus',
-                        };
+                    const estadoMessages: Record<string, string> = {
+                        'En Ruta': '🚌 El bus está en ruta',
+                        'Operativo': '✅ El bus está operativo',
+                        'Retrasado': '⏰ El bus está retrasado',
+                        'Dañado': '⚠️ El bus está dañado',
+                        '911': '🚨 Emergencia en el bus',
+                    };
 
+                    const ESTADOS_ALERTA = ['Retrasado', 'Dañado', '911'];
+                    const estadoPrevio = estadosPreviosRef.current[updatedVehiculo.id];
+                    const entroEnAlerta =
+                        ESTADOS_ALERTA.includes(updatedVehiculo.estado) &&
+                        estadoPrevio !== updatedVehiculo.estado;
+                    estadosPreviosRef.current[updatedVehiculo.id] = updatedVehiculo.estado;
+
+                    if (entroEnAlerta) {
+                        // Alertar de la incidencia para CUALQUIER bus de la ruta del usuario,
+                        // esté o no seleccionado. El 911 suena.
+                        toast({
+                            title: updatedVehiculo.estado === '911' ? '🚨 Emergencia en tu ruta' : '⚠️ Incidencia en tu ruta',
+                            description: `Bus ${updatedVehiculo.ficha}: ${estadoMessages[updatedVehiculo.estado]}`,
+                            variant: 'destructive',
+                        });
+                        if (updatedVehiculo.estado === '911' || updatedVehiculo.estado === 'Dañado') {
+                            playErrorSound();
+                        }
+                    } else if (selectedBusId === updatedVehiculo.id) {
+                        // Resto de actualizaciones: solo el bus seleccionado
                         toast({
                             title: 'Actualización del bus',
                             description: estadoMessages[updatedVehiculo.estado] || `Estado: ${updatedVehiculo.estado}`,

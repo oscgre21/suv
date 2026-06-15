@@ -8,12 +8,16 @@ export async function GET() {
     const guard = await requireAdmin();
     if (guard.response) return guard.response;
 
-    // Check cache first (5 minute TTL)
+    // El desglose de alertas (Retrasado/Dañado/911) se calcula SIEMPRE fresco
+    // —no se cachea— para que el admin vea las incidencias en tiempo casi real.
+    const alertas = await calcularAlertas();
+
+    // Check cache first (5 minute TTL) para las métricas históricas
     const cacheKey = 'dashboard:stats';
     const cached = apiCache.get(cacheKey);
 
     if (cached) {
-      return NextResponse.json(cached);
+      return NextResponse.json({ ...cached, ...alertas });
     }
 
     // If not in cache, fetch from database
@@ -104,10 +108,10 @@ export async function GET() {
       puntualidadChange,
     };
 
-    // Cache the result for 5 minutes (300000ms)
+    // Cache the result for 5 minutes (300000ms) — sin las alertas, que van frescas
     apiCache.set(cacheKey, result, 300000);
 
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, ...alertas });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     return NextResponse.json(
@@ -115,4 +119,31 @@ export async function GET() {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Conteo de buses en estados de alerta (sin cache, siempre fresco).
+ * Devuelve el total y el desglose por estado.
+ */
+async function calcularAlertas() {
+  const ESTADOS_ALERTA = ['Retrasado', 'Dañado', '911'];
+
+  const porEstado = await prisma.vehiculo.groupBy({
+    by: ['estado'],
+    where: { estado: { in: ESTADOS_ALERTA } },
+    _count: { _all: true },
+  });
+
+  const desglose: Record<string, number> = { Retrasado: 0, Dañado: 0, '911': 0 };
+  for (const fila of porEstado) {
+    desglose[fila.estado] = fila._count._all;
+  }
+
+  const busesEnAlerta = desglose.Retrasado + desglose.Dañado + desglose['911'];
+
+  return {
+    busesEnAlerta,
+    alertasDesglose: desglose, // { Retrasado, Dañado, 911 }
+    hayEmergencia: desglose['911'] > 0,
+  };
 }

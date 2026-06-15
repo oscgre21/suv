@@ -65,6 +65,8 @@ model Vehiculo {
   longitud            Float?           // Longitud GPS
   pasajerosABordo     Int?             @default(0) // Número de pasajeros actualmente en el bus
   ultimaActualizacion DateTime?        // Timestamp última actualización GPS
+  paradaActualId      String?          // Parada en la que se encuentra/última confirmada
+  paradaActual        Parada?          @relation("ParadaActual", fields: [paradaActualId], references: [id])
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   historialViajes     HistorialViaje[]
@@ -106,6 +108,7 @@ model Parada {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   solicitudes SolicitudParada[]
+  vehiculosActuales Vehiculo[]  @relation("ParadaActual")
 
   @@unique([rutaId, orden])
   @@index([rutaId])
