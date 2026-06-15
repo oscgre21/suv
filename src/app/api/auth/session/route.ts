@@ -47,6 +47,7 @@ export async function GET() {
           nombre: true,
           email: true,
           cedula: true,
+          rol: true,
           rutaAsignada: true,
           ruta: {
             select: {
@@ -65,7 +66,7 @@ export async function GET() {
         );
       }
 
-      return NextResponse.json(usuario);
+      return NextResponse.json({ ...usuario, tipo: 'usuario' });
     }
 
     return NextResponse.json(

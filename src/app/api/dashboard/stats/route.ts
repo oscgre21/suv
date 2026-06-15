@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiCache } from '@/lib/cache';
+import { requireAdmin } from '@/lib/auth-guard';
 
 export async function GET() {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
+
     // Check cache first (5 minute TTL)
     const cacheKey = 'dashboard:stats';
     const cached = apiCache.get(cacheKey);

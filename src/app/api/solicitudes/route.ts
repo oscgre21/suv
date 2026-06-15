@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { handlePrismaError } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth-guard';
 import { solicitudParadaSchema } from '@/lib/validations';
 
 // GET /api/solicitudes - Listar todas las solicitudes de parada
 export async function GET(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const { searchParams } = new URL(request.url);
     const usuarioId = searchParams.get('usuarioId');
     const paradaId = searchParams.get('paradaId');
@@ -69,6 +72,8 @@ export async function GET(request: NextRequest) {
 // POST /api/solicitudes - Crear nueva solicitud de parada
 export async function POST(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const body = await request.json();
 
     // Validar con Zod

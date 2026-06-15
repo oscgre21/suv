@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { handlePrismaError } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth-guard';
+import { getSession } from '@/lib/session';
 import { solicitudParadaSchema } from '@/lib/validations';
 
 // GET /api/solicitudes/[id] - Obtener solicitud por ID
@@ -9,6 +11,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const solicitud = await prisma.solicitudParada.findUnique({
       where: { id: params.id },
       include: {
@@ -48,6 +52,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const body = await request.json();
 
     // Validación parcial con Zod
@@ -88,11 +94,17 @@ export async function PATCH(
 }
 
 // DELETE /api/solicitudes/[id] - Eliminar solicitud (cancelar)
+// Permitido al administrador o al propio pasajero dueño de la solicitud.
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+
     const solicitud = await prisma.solicitudParada.findUnique({
       where: { id: params.id },
     });
@@ -102,6 +114,12 @@ export async function DELETE(
         { error: 'Solicitud no encontrada' },
         { status: 404 }
       );
+    }
+
+    const esAdmin = session.tipo === 'usuario' && session.rol === 'admin';
+    const esDueno = session.tipo === 'usuario' && session.userId === solicitud.usuarioId;
+    if (!esAdmin && !esDueno) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
     // En lugar de eliminar, cambiar estado a Cancelado si está pendiente

@@ -9,6 +9,8 @@ interface Usuario {
   nombre: string;
   email: string;
   cedula: string;
+  tipo?: 'usuario' | 'conductor';
+  rol?: 'admin' | 'pasajero';
   rutaAsignada: string | null;
   ruta: {
     id: string;
@@ -20,6 +22,9 @@ interface Usuario {
 interface AuthContextType {
   usuario: Usuario | null;
   isLoading: boolean;
+  isAdmin: boolean;
+  isConductor: boolean;
+  isPasajero: boolean;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -61,8 +66,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchUsuario();
   };
 
+  const isConductor = usuario?.tipo === 'conductor';
+  const isAdmin = usuario?.tipo === 'usuario' && usuario?.rol === 'admin';
+  const isPasajero = usuario?.tipo === 'usuario' && usuario?.rol !== 'admin';
+
   return (
-    <AuthContext.Provider value={{ usuario, isLoading, logout, refresh }}>
+    <AuthContext.Provider
+      value={{ usuario, isLoading, isAdmin, isConductor, isPasajero, logout, refresh }}
+    >
       {children}
     </AuthContext.Provider>
   );

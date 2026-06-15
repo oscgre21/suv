@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { handlePrismaError, sanitizeSearchInput } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth-guard';
 import { usuarioSchema } from '@/lib/validations';
 
 // GET /api/usuarios - Listar todos los usuarios
 export async function GET(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const { searchParams } = new URL(request.url);
     const estado = searchParams.get('estado');
     const rutaId = searchParams.get('rutaId');
@@ -68,6 +71,8 @@ export async function GET(request: NextRequest) {
 // POST /api/usuarios - Crear nuevo usuario
 export async function POST(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const body = await request.json();
 
     // Validar con Zod

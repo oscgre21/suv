@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { handlePrismaError, sanitizeSearchInput } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth-guard';
 import { paradaSchema } from '@/lib/validations';
 
 // GET /api/paradas - Listar todas las paradas
 export async function GET(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const { searchParams } = new URL(request.url);
     const rutaId = searchParams.get('rutaId');
     const activa = searchParams.get('activa');
@@ -60,6 +63,8 @@ export async function GET(request: NextRequest) {
 // POST /api/paradas - Crear nueva parada
 export async function POST(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const body = await request.json();
 
     // Validar con Zod

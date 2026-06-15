@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { handlePrismaError, sanitizeSearchInput } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth-guard';
 import { estatusVehiculoSchema } from '@/lib/validations';
 
 // GET /api/estatus-vehiculo - Listar todos los estatus de vehículos
 export async function GET(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const { searchParams } = new URL(request.url);
     const activo = searchParams.get('activo');
     const search = searchParams.get('search');
@@ -41,6 +44,8 @@ export async function GET(request: NextRequest) {
 // POST /api/estatus-vehiculo - Crear nuevo estatus de vehículo
 export async function POST(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const body = await request.json();
 
     // Validar con Zod

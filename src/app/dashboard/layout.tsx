@@ -46,6 +46,8 @@ import { cn } from '@/lib/utils';
 import React, { useState, useEffect } from 'react';
 import { LogoutDialog } from '@/components/logout-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 
 
 export default function DashboardLayout({
@@ -54,14 +56,28 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAdmin, isLoading } = useAuth();
   const [userViewUrl, setUserViewUrl] = useState('');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
+  // Defensa en profundidad: además del middleware, si por algún motivo un
+  // no-administrador llega aquí, lo sacamos del dashboard.
+  useEffect(() => {
+    if (!isLoading && !isAdmin) {
+      router.replace('/');
+    }
+  }, [isLoading, isAdmin, router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
         setUserViewUrl(`${window.location.protocol}//${window.location.host}/usuario`);
     }
   }, []);
+
+  if (isLoading || !isAdmin) {
+    return null;
+  }
     
   const isGestionActive = pathname.startsWith('/dashboard/usuarios') || pathname.startsWith('/dashboard/choferes-y-vehiculos');
   const isConfigActive = pathname.startsWith('/dashboard/configuracion') || pathname.startsWith('/dashboard/data-master') || pathname.startsWith('/dashboard/usuario');

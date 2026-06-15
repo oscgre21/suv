@@ -250,6 +250,9 @@ async function main() {
   // ==================== CONDUCTORES ====================
   console.log('👨‍✈️ Creando conductores...');
 
+  // La contraseña inicial de cada conductor es su propia cédula (hasheada).
+  const hashCedula = (cedula: string) => bcrypt.hash(cedula, 10);
+
   const conductor1 = await prisma.conductor.create({
     data: {
       nombre: 'Manuel Antonio González',
@@ -257,6 +260,7 @@ async function main() {
       licencia: 'LIC-2020-001234',
       telefono: '809-555-0101',
       email: 'manuel.gonzalez@cesac.com',
+      password: await hashCedula('001-1234567-8'),
       turno: 'Matutino',
       estado: 'Activo',
     },
@@ -269,6 +273,7 @@ async function main() {
       licencia: 'LIC-2019-005678',
       telefono: '809-555-0102',
       email: 'ricardo.peralta@cesac.com',
+      password: await hashCedula('001-8765432-1'),
       turno: 'Vespertino',
       estado: 'Activo',
     },
@@ -281,6 +286,7 @@ async function main() {
       licencia: 'LIC-2021-002345',
       telefono: '809-555-0103',
       email: 'jose.ramirez@cesac.com',
+      password: await hashCedula('002-3456789-0'),
       turno: 'Matutino',
       estado: 'Activo',
     },
@@ -293,6 +299,7 @@ async function main() {
       licencia: 'LIC-2020-006789',
       telefono: '809-555-0104',
       email: 'carlos.mendez@cesac.com',
+      password: await hashCedula('002-9876543-2'),
       turno: 'Nocturno',
       estado: 'Activo',
     },
@@ -304,6 +311,7 @@ async function main() {
       cedula: '003-1122334-4',
       licencia: 'LIC-2022-003456',
       telefono: '809-555-0105',
+      password: await hashCedula('003-1122334-4'),
       turno: 'Vespertino',
       estado: 'Vacaciones',
     },
@@ -316,12 +324,13 @@ async function main() {
       licencia: 'LIC-2023-007890',
       telefono: '809-555-1001',
       email: 'juan.perez@empresa.com',
+      password: await hashCedula('004-1234567-9'),
       turno: 'Matutino',
       estado: 'Activo',
     },
   });
 
-  console.log('✅ 6 conductores creados\n');
+  console.log('✅ 6 conductores creados (password = cédula)\n');
 
   // ==================== VEHÍCULOS ====================
   console.log('🚌 Creando vehículos con datos GPS...');
@@ -435,12 +444,27 @@ async function main() {
   // Contraseña por defecto: "password123" (hasheada)
   const defaultPassword = await bcrypt.hash('password123', 10);
 
+  // Usuario administrador (acceso al dashboard de gestión de flota)
+  const adminPassword = await bcrypt.hash('admin123', 10);
+  await prisma.usuario.create({
+    data: {
+      nombre: 'Administrador CESAC',
+      cedula: '000-0000000-0',
+      email: 'admin@cesac.com',
+      password: adminPassword,
+      rol: 'admin',
+      telefono: '809-555-0000',
+      estado: 'Activo',
+    },
+  });
+
   const usuario1 = await prisma.usuario.create({
     data: {
       nombre: 'María Rodríguez Santos',
       cedula: '004-9876543-2',
       email: 'maria.rodriguez@empresa.com',
       password: defaultPassword,
+      rol: 'pasajero',
       telefono: '809-555-1002',
       direccion: 'Villa Mella, Santo Domingo Norte',
       rutaAsignada: rutaCharles.id,
@@ -454,6 +478,7 @@ async function main() {
       cedula: '005-2345678-0',
       email: 'ana.lopez@empresa.com',
       password: defaultPassword,
+      rol: 'pasajero',
       telefono: '809-555-1003',
       direccion: 'Independencia, Santo Domingo',
       rutaAsignada: rutaIndependencia.id,
@@ -467,6 +492,7 @@ async function main() {
       cedula: '005-8765432-1',
       email: 'roberto.martinez@empresa.com',
       password: defaultPassword,
+      rol: 'pasajero',
       telefono: '809-555-1004',
       direccion: 'Herrera, Santo Domingo',
       rutaAsignada: rutaCharles.id,
@@ -480,6 +506,7 @@ async function main() {
       cedula: '006-3456789-1',
       email: 'carmen.fernandez@empresa.com',
       password: defaultPassword,
+      rol: 'pasajero',
       telefono: '809-555-1005',
       direccion: 'Los Mina, Santo Domingo Este',
       rutaAsignada: rutaDuarte.id,
@@ -487,7 +514,7 @@ async function main() {
     },
   });
 
-  console.log('✅ 4 usuarios creados (password: password123)\n');
+  console.log('✅ 1 admin (admin@cesac.com / admin123) + 4 usuarios creados (password: password123)\n');
 
   // ==================== HORARIOS ====================
   console.log('⏰ Creando horarios...');

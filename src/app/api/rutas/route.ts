@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { handlePrismaError, sanitizeSearchInput } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth-guard';
 import { rutaSchema } from '@/lib/validations';
 
 // GET /api/rutas - Listar todas las rutas
 export async function GET(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const { searchParams } = new URL(request.url);
     const activa = searchParams.get('activa');
     const esEspecial = searchParams.get('esEspecial');
@@ -66,6 +69,8 @@ export async function GET(request: NextRequest) {
 // POST /api/rutas - Crear nueva ruta
 export async function POST(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const body = await request.json();
 
     // Validar con Zod

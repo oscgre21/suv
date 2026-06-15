@@ -14,14 +14,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Intentar login como usuario
-    const usuario = await prisma.usuario.findUnique({
-      where: { email },
+    // El identificador puede ser correo o cédula
+    const identificador = String(email).trim();
+
+    // Intentar login como usuario (por email o cédula)
+    const usuario = await prisma.usuario.findFirst({
+      where: { OR: [{ email: identificador }, { cedula: identificador }] },
       select: {
         id: true,
         nombre: true,
         email: true,
         password: true,
+        rol: true,
         rutaAsignada: true,
       },
     });
@@ -29,9 +33,11 @@ export async function POST(request: Request) {
     if (usuario && usuario.password) {
       const passwordMatch = await bcrypt.compare(password, usuario.password);
       if (passwordMatch) {
+        const rol = usuario.rol === 'admin' ? 'admin' : 'pasajero';
         const sessionData = {
           userId: usuario.id,
           tipo: 'usuario' as const,
+          rol: rol as 'admin' | 'pasajero',
           nombre: usuario.nombre,
           email: usuario.email,
           rutaAsignada: usuario.rutaAsignada,
@@ -45,19 +51,21 @@ export async function POST(request: Request) {
             id: usuario.id,
             nombre: usuario.nombre,
             email: usuario.email,
+            rol,
             rutaAsignada: usuario.rutaAsignada,
           },
         });
       }
     }
 
-    // Intentar login como conductor (por email)
+    // Intentar login como conductor (por email o cédula)
     const conductor = await prisma.conductor.findFirst({
-      where: { email },
+      where: { OR: [{ email: identificador }, { cedula: identificador }] },
       select: {
         id: true,
         nombre: true,
         email: true,
+        password: true,
         vehiculoId: true,
         vehiculo: {
           select: { rutaAsignada: true },
@@ -66,27 +74,35 @@ export async function POST(request: Request) {
     });
 
     if (conductor) {
-      // Los conductores no tienen password hasheado, aceptar cualquier password temporalmente
-      // TODO: Implementar passwords para conductores en producción
-      const sessionData = {
-        conductorId: conductor.id,
-        tipo: 'conductor' as const,
-        nombre: conductor.nombre,
-        email: conductor.email || '',
-        vehiculoId: conductor.vehiculoId,
-        rutaAsignada: conductor.vehiculo?.rutaAsignada,
-      };
-      const token = await createSession(sessionData);
-      await setSessionCookie(token);
-      return NextResponse.json({
-        success: true,
-        tipo: 'conductor',
-        conductor: {
-          id: conductor.id,
+      if (!conductor.password) {
+        return NextResponse.json(
+          { error: 'Este conductor no tiene contraseña configurada. Contacte al administrador.' },
+          { status: 401 }
+        );
+      }
+
+      const passwordMatch = await bcrypt.compare(password, conductor.password);
+      if (passwordMatch) {
+        const sessionData = {
+          conductorId: conductor.id,
+          tipo: 'conductor' as const,
           nombre: conductor.nombre,
-          email: conductor.email,
-        },
-      });
+          email: conductor.email || '',
+          vehiculoId: conductor.vehiculoId,
+          rutaAsignada: conductor.vehiculo?.rutaAsignada,
+        };
+        const token = await createSession(sessionData);
+        await setSessionCookie(token);
+        return NextResponse.json({
+          success: true,
+          tipo: 'conductor',
+          conductor: {
+            id: conductor.id,
+            nombre: conductor.nombre,
+            email: conductor.email,
+          },
+        });
+      }
     }
 
     return NextResponse.json(

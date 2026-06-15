@@ -42,7 +42,12 @@ export default function LoginPage() {
         const nombre = response.tipo === 'usuario'
           ? response.usuario?.nombre
           : response.conductor?.nombre;
-        const destino = response.tipo === 'conductor' ? '/vista-bus' : '/dashboard';
+        let destino = '/usuario';
+        if (response.tipo === 'conductor') {
+          destino = '/vista-bus';
+        } else if (response.usuario?.rol === 'admin') {
+          destino = '/dashboard';
+        }
 
         if (nombre) {
           toast({

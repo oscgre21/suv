@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { handlePrismaError } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth-guard';
 import { estatusVehiculoSchema } from '@/lib/validations';
 
 // GET /api/estatus-vehiculo/[id] - Obtener estatus de vehículo por ID
@@ -9,6 +10,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const estatusVehiculo = await prisma.estatusVehiculo.findUnique({
       where: { id: params.id },
     });
@@ -33,6 +36,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const body = await request.json();
 
     // Validación parcial con Zod
@@ -77,6 +82,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const estatusVehiculo = await prisma.estatusVehiculo.findUnique({
       where: { id: params.id },
     });

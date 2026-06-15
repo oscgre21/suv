@@ -12,42 +12,48 @@
 
 | # | Historia | Estado | Estimación | Prioridad |
 |---|----------|--------|------------|-----------|
-| 01 | [Setup Prisma con PostgreSQL](./HISTORIA-01-setup-prisma-postgresql.md) | ⏳ Pendiente | 2-3h | CRÍTICA |
-| 02 | [Setup Google Maps API](./HISTORIA-02-setup-google-maps.md) | ⏳ Pendiente | 3-4h | ALTA |
-| 03 | [Schemas Zod y Tipos TypeScript](./HISTORIA-03-schemas-zod-tipos.md) | ⏳ Pendiente | 2-3h | ALTA |
-| 04 | [Seed de Datos Iniciales](./HISTORIA-04-seed-datos-iniciales.md) | ⏳ Pendiente | 1-2h | MEDIA |
+| 01 | [Setup Prisma con PostgreSQL](./HISTORIA-01-setup-prisma-postgresql.md) | ✅ Completada | 2-3h | CRÍTICA |
+| 02 | [Setup Google Maps API](./HISTORIA-02-setup-google-maps.md) | ✅ Completada | 3-4h | ALTA |
+| 03 | [Schemas Zod y Tipos TypeScript](./HISTORIA-03-schemas-zod-tipos.md) | ✅ Completada | 2-3h | ALTA |
+| 04 | [Seed de Datos Iniciales](./HISTORIA-04-seed-datos-iniciales.md) | ✅ Completada | 1-2h | MEDIA |
 
 ### 🔌 Fase 2: API Routes (Historias 05-12)
 
 | # | Historia | Estado | Estimación | Prioridad |
 |---|----------|--------|------------|-----------|
-| 05 | [Hook useApi y API Base](./HISTORIA-05-hook-useapi.md) | ⏳ Pendiente | 1-2h | ALTA |
-| 06 | [API Routes: Conductores](./HISTORIA-06-api-conductores.md) | ⏳ Pendiente | 2-3h | ALTA |
-| 07 | [API Routes: Vehículos](./HISTORIA-07-api-vehiculos.md) | ⏳ Pendiente | 2-3h | ALTA |
-| 08 | [API Routes: Rutas](./HISTORIA-08-api-rutas.md) | ⏳ Pendiente | 2-3h | ALTA |
-| 09 | [API Routes: Paradas](./HISTORIA-09-api-paradas.md) | ⏳ Pendiente | 2-3h | ALTA |
-| 10 | [API Routes: Usuarios](./HISTORIA-10-api-usuarios.md) | ⏳ Pendiente | 2-3h | ALTA |
-| 11 | [API Routes: Horarios](./HISTORIA-11-api-horarios.md) | ⏳ Pendiente | 2-3h | MEDIA |
-| 12 | [API Routes: Solicitudes y Estatus](./HISTORIA-12-api-solicitudes-estatus.md) | ⏳ Pendiente | 2-3h | MEDIA |
+| 05 | [Hook useApi y API Base](./HISTORIA-05-hook-useapi.md) | ✅ Completada | 1-2h | ALTA |
+| 06 | [API Routes: Conductores](./HISTORIA-06-api-conductores.md) | ✅ Completada | 2-3h | ALTA |
+| 07 | [API Routes: Vehículos](./HISTORIA-07-api-vehiculos.md) | ✅ Completada | 2-3h | ALTA |
+| 08 | [API Routes: Rutas](./HISTORIA-08-api-rutas.md) | ✅ Completada | 2-3h | ALTA |
+| 09 | [API Routes: Paradas](./HISTORIA-09-api-paradas.md) | ✅ Completada | 2-3h | ALTA |
+| 10 | [API Routes: Usuarios](./HISTORIA-10-api-usuarios.md) | ✅ Completada | 2-3h | ALTA |
+| 11 | [API Routes: Horarios](./HISTORIA-11-api-horarios.md) | ✅ Completada | 2-3h | MEDIA |
+| 12 | [API Routes: Solicitudes y Estatus](./HISTORIA-12-api-solicitudes-estatus.md) | ✅ Completada | 2-3h | MEDIA |
 
 ### 🎨 Fase 3: Componentes CRUD (Historias 13-20)
 
 | # | Historia | Estado | Estimación | Prioridad |
 |---|----------|--------|------------|-----------|
-| 13 | [CRUD Frontend: Conductores](./HISTORIA-13-crud-conductores.md) | ⏳ Pendiente | 3-4h | ALTA |
-| 14 | [CRUD Frontend: Vehículos](./HISTORIA-14-crud-vehiculos.md) | ⏳ Pendiente | 3-4h | ALTA |
-| 15 | [CRUD Frontend: Rutas](./HISTORIA-15-crud-rutas.md) | ⏳ Pendiente | 3-4h | ALTA |
-| 16 | [CRUD Frontend: Usuarios](./HISTORIA-16-crud-usuarios.md) | ⏳ Pendiente | 3-4h | ALTA |
-| 17 | [Página de Paradas con Google Maps](./HISTORIA-17-paradas-con-maps.md) | ⏳ Pendiente | 4-5h | ALTA |
-| 18 | [CRUD Frontend: Horarios](./HISTORIA-18-crud-horarios.md) | ⏳ Pendiente | 3-4h | MEDIA |
-| 19 | [CRUD Frontend: Estatus Vehículos](./HISTORIA-19-crud-estatus.md) | ⏳ Pendiente | 2-3h | BAJA |
-| 20 | [Actualizar Vista Solicitudes con BD](./HISTORIA-20-actualizar-solicitudes.md) | ⏳ Pendiente | 2-3h | MEDIA |
+| 13 | [CRUD Frontend: Conductores](./HISTORIA-13-crud-conductores.md) | ✅ Completada | 3-4h | ALTA |
+| 14 | [CRUD Frontend: Vehículos](./HISTORIA-14-crud-vehiculos.md) | ✅ Completada | 3-4h | ALTA |
+| 15 | [CRUD Frontend: Rutas](./HISTORIA-15-crud-rutas.md) | ✅ Completada | 3-4h | ALTA |
+| 16 | [CRUD Frontend: Usuarios](./HISTORIA-16-crud-usuarios.md) | ✅ Completada | 3-4h | ALTA |
+| 17 | [Página de Paradas con Google Maps](./HISTORIA-17-paradas-con-maps.md) | ✅ Completada | 4-5h | ALTA |
+| 18 | [CRUD Frontend: Horarios](./HISTORIA-18-crud-horarios.md) | ✅ Completada | 3-4h | MEDIA |
+| 19 | [CRUD Frontend: Estatus Vehículos](./HISTORIA-19-crud-estatus.md) | ✅ Completada | 2-3h | BAJA |
+| 20 | [Actualizar Vista Solicitudes con BD](./HISTORIA-20-actualizar-solicitudes.md) | ✅ Completada | 2-3h | MEDIA |
 
 ### ✅ Fase 4: Testing y Verificación (Historia 21)
 
 | # | Historia | Estado | Estimación | Prioridad |
 |---|----------|--------|------------|-----------|
 | 21 | [Testing End-to-End y Verificación](./HISTORIA-21-testing-verificacion.md) | ⏳ Pendiente | 4-6h | CRÍTICA |
+
+### 🔐 Fase 5: Seguridad y Roles (Historia 22)
+
+| # | Historia | Estado | Estimación | Prioridad |
+|---|----------|--------|------------|-----------|
+| 22 | [Roles y Control de Acceso (Admin/Conductor/Pasajero)](./HISTORIA-22-roles-y-control-de-acceso.md) | ✅ Completada | 4-6h | CRÍTICA |
 
 ---
 

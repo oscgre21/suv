@@ -9,6 +9,7 @@ export interface SessionData {
   userId?: string;           // Para usuarios
   conductorId?: string;      // Para conductores
   tipo: 'usuario' | 'conductor';
+  rol?: 'admin' | 'pasajero'; // Solo para tipo === 'usuario'
   nombre: string;
   email: string;
   rutaAsignada?: string | null;
@@ -25,18 +26,26 @@ export async function createSession(data: SessionData): Promise<string> {
   return token;
 }
 
-export async function getSession(): Promise<SessionData | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('session')?.value;
-
+/**
+ * Verifica un token JWT y devuelve su SessionData. Es "edge-safe": opera
+ * directamente sobre el string del token (sin `next/headers`), por lo que
+ * puede usarse desde el middleware (edge runtime) además del servidor.
+ */
+export async function verifyToken(token: string | undefined): Promise<SessionData | null> {
   if (!token) return null;
 
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload as SessionData;
-  } catch (error) {
+    return payload as unknown as SessionData;
+  } catch {
     return null;
   }
+}
+
+export async function getSession(): Promise<SessionData | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('session')?.value;
+  return verifyToken(token);
 }
 
 export async function setSessionCookie(token: string): Promise<void> {

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { handlePrismaError } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth-guard';
 import { horarioSchema } from '@/lib/validations';
 
 // GET /api/horarios - Listar todos los horarios
 export async function GET(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const { searchParams } = new URL(request.url);
     const rutaId = searchParams.get('rutaId');
     const conductorId = searchParams.get('conductorId');
@@ -54,6 +57,8 @@ export async function GET(request: NextRequest) {
 // POST /api/horarios - Crear nuevo horario
 export async function POST(request: NextRequest) {
   try {
+    const guard = await requireAdmin();
+    if (guard.response) return guard.response;
     const body = await request.json();
 
     // Validar con Zod
